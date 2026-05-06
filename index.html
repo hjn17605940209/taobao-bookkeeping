@@ -254,15 +254,27 @@
 </div>
 
 <!-- 通过 CDN 加载 Supabase JS SDK（非 module 方式） -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 <script>
 // ========== Supabase 初始化 ==========
-// 库加载后会把自己挂载到 window.supabase 上
-// 使用 var _sb 作为客户端变量名，避免和 window.supabase 冲突
-var _sb = window.supabase.createClient(
+// 等待 Supabase 库加载完成
+function waitForSupabase(callback) {
+  if (window.supabase && window.supabase.createClient) {
+    callback();
+  } else {
+    setTimeout(function() { waitForSupabase(callback); }, 200);
+  }
+}
+
+var _sb;
+waitForSupabase(function() {
+  _sb = window.supabase.createClient(
   'https://vjildthiuxhoukakvtui.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg'
 );
+  // 库加载完成后初始化
+  init();
+});
 
 // ========== 数据存储 ==========
 var data = { incomeA: [], incomeB: [], expense: [], loans: [], repayments: [] };
@@ -723,8 +735,7 @@ function init() {
   setupRealtime();
 }
 
-// 页面加载完成后初始化
-init();
+// init() 已在 waitForSupabase 回调中调用，此处不再重复调用
 </script>
 </body>
 </html>
