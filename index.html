@@ -683,6 +683,17 @@ function exportCSV(){
 }
 
 init();
+
+// 将所有函数暴露到全局作用域，供 onclick 调用
+window.addLoan = addLoan;
+window.addRepay = addRepay;
+window.delLoan = delLoan;
+window.delRepay = delRepay;
+window.addInc = addInc;
+window.addExp = addExp;
+window.delItem = delItem;
+window.exportCSV = exportCSV;
+window.renderAll = renderAll;
 </script>
 </body>
 </html>
