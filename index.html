@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>淘宝记账 · 双店铺利润表</title>
+<title>淘宝记账 · 双店铺利润表 · 云端同步版</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg: #f7f5f0; --surface: #ffffff; --accent: #c4501a; --accent-light: #fdf0ec;
@@ -31,6 +32,11 @@
   .month-sel input{border:none;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-primary);background:transparent;outline:none;width:115px}
   .btn-top{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text-secondary);transition:all .2s;font-family:'Noto Sans SC',sans-serif;box-shadow:var(--shadow-sm)}
   .btn-top:hover{border-color:var(--accent);color:var(--accent)}
+  .sync-status{font-size:11px;padding:4px 10px;border-radius:4px;background:var(--green-light);color:var(--green);display:flex;align-items:center;gap:5px}
+  .sync-status.syncing{background:var(--yellow-light);color:var(--yellow)}
+  .sync-status.error{background:var(--red-light);color:var(--red)}
+  .sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
   .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px}
   .sum-card{background:var(--surface);border-radius:10px;padding:14px;border:1px solid var(--border);box-shadow:var(--shadow-sm);animation:fadeUp .5s ease both}
@@ -110,9 +116,10 @@
     <div class="header-top">
       <div>
         <h1>淘宝<span>记账</span></h1>
-        <p class="header-sub">双店铺利润表 · 内裤店 + 衣服店 · 分批借款 · 50/50分账</p>
+        <p class="header-sub">双店铺利润表 · 内裤店 + 衣服店 · 云端同步版</p>
       </div>
       <div class="header-right">
+        <div class="sync-status" id="syncStatus"><span class="sync-dot"></span>同步中...</div>
         <div class="month-sel"><label>账期</label><input type="month" id="curMonth" onchange="renderAll()"></div>
         <button class="btn-top" onclick="exportCSV()">导出Excel</button>
         <button class="btn-top" onclick="window.print()">打印/PDF</button>
@@ -145,7 +152,6 @@
       <span>本月利息: <b id="lMonthInt">¥0</b></span>
       <span>累计利息: <b id="lTotalInt">¥0</b></span>
     </div>
-    <!-- Borrow table -->
     <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:var(--text-secondary)">借款记录</div>
     <div class="tw"><table>
       <thead><tr><th>日期</th><th>借款金额 (¥)</th><th>已计息天数</th><th>本月利息 (¥)</th><th>备注</th><th></th></tr></thead>
@@ -157,7 +163,6 @@
       <input type="text" id="loanRemark" placeholder="备注（选填）" style="flex:1;min-width:100px">
       <button class="btn-add" onclick="addLoan()">+ 添加借款</button>
     </div>
-    <!-- Repay table -->
     <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:var(--text-secondary);border-top:1px solid var(--border)">还款记录</div>
     <div class="tw"><table>
       <thead><tr><th>日期</th><th>还款金额 (¥)</th><th>备注</th><th></th></tr></thead>
@@ -237,36 +242,68 @@
   <div class="notes">
     <h3>使用说明</h3>
     <ul>
+      <li><b>云端同步版</b>：数据实时同步到云端，多人共享同一套数据</li>
       <li><b>纯利润 = 总收入 − 全部支出（含贷款利息）</b></li>
       <li><b>毛利润 = 总收入 − 货款 − 运费</b>（衡量商品本身是否赚钱）</li>
       <li>贷款利息按每笔借款的实际天数计算，单利 17.64%/年，日利率 ≈ 0.0483%</li>
       <li>退款请填负数金额（如 -58.00），建议退款完成后再结算当月数据</li>
       <li>行业利润率一般在 5%-15%，低于 5% 需关注成本控制</li>
-      <li>数据保存在浏览器本地，建议每月导出 Excel 备份</li>
       <li>点击"打印/PDF"可生成对账单发给合伙人</li>
     </ul>
   </div>
-  <div class="footer">淘宝记账 · 双店铺利润表</div>
+  <div class="footer">淘宝记账 · 双店铺利润表 · 云端同步版</div>
 </div>
 
 <script>
-const K='taobao_bookkeeping_v3';
-let data;
-const DAILY_RATE=17.64/365/100; // 0.000483...
+// Supabase Configuration
+const SUPABASE_URL = 'https://vjildthiuxhoukakvtui.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg';
 
-function load(){
-  const r=localStorage.getItem(K);
-  if(r){
-    data=JSON.parse(r);
-    // Migrate from old format
-    if(data.loan && !data.loans){data.loans=[];data.repayments=[];delete data.loan;}
-    if(!data.loans) data.loans=[];
-    if(!data.repayments) data.repayments=[];
-  } else {
-    data={incomeA:[],incomeB:[],expense:[],loans:[],repayments:[]};
+// Initialize Supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Data storage (in-memory, synced with Supabase)
+let data = {incomeA:[],incomeB:[],expense:[],loans:[],repayments:[]};
+const DAILY_RATE=17.64/365/100;
+
+// Sync status
+let isSyncing = false;
+
+function setSyncStatus(status, message) {
+  const el = document.getElementById('syncStatus');
+  el.className = 'sync-status ' + status;
+  el.innerHTML = status === 'syncing' ? '<span class="sync-dot"></span>' + message : message;
+}
+
+// Load data from Supabase
+async function loadFromSupabase() {
+  setSyncStatus('syncing', '同步中...');
+  try {
+    // Load income A
+    let {data: incomeA} = await supabase.from('income').select('*').eq('store', 'A').order('date', {ascending: false});
+    // Load income B
+    let {data: incomeB} = await supabase.from('income').select('*').eq('store', 'B').order('date', {ascending: false});
+    // Load expenses
+    let {data: expenses} = await supabase.from('expenses').select('*').order('date', {ascending: false});
+    // Load loans
+    let {data: loans} = await supabase.from('loans').select('*').order('date', {ascending: false});
+    // Load repayments
+    let {data: repayments} = await supabase.from('repayments').select('*').order('date', {ascending: false});
+    
+    data.incomeA = incomeA || [];
+    data.incomeB = incomeB || [];
+    data.expense = expenses || [];
+    data.loans = loans || [];
+    data.repayments = repayments || [];
+    
+    setSyncStatus('', '已同步');
+    renderAll();
+  } catch(e) {
+    console.error('Sync error:', e);
+    setSyncStatus('error', '同步失败');
   }
 }
-function save(){localStorage.setItem(K,JSON.stringify(data));}
+
 function fmt(n){return'¥'+Number(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function today(){return new Date().toISOString().split('T')[0];}
 function monthRange(m){const[y,mo]=m.split('-').map(Number);const s=`${y}-${String(mo).padStart(2,'0')}-01`;const l=new Date(y,mo,0).getDate();const e=`${y}-${String(mo).padStart(2,'0')}-${String(l).padStart(2,'0')}`;return{s,e,days:l};}
@@ -274,51 +311,88 @@ function filterMonth(arr){const m=document.getElementById('curMonth').value;retu
 function daysBetween(a,b){return Math.max(0,Math.ceil((new Date(b)-new Date(a))/(1000*60*60*24)));}
 
 function init(){
-  load();
   document.getElementById('curMonth').value=new Date().toISOString().slice(0,7);
   const t=today();
   ['dA','dB','dE','loanDate','repayDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
-  renderAll();
+  loadFromSupabase();
+  
+  // Set up realtime subscription
+  setupRealtime();
+}
+
+function setupRealtime() {
+  supabase.channel('public:income')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'income'}, () => loadFromSupabase())
+    .subscribe();
+  supabase.channel('public:expenses')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'expenses'}, () => loadFromSupabase())
+    .subscribe();
+  supabase.channel('public:loans')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'loans'}, () => loadFromSupabase())
+    .subscribe();
+  supabase.channel('public:repayments')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'repayments'}, () => loadFromSupabase())
+    .subscribe();
 }
 
 // ===== LOAN MANAGEMENT =====
-function addLoan(){
+async function addLoan(){
   const date=document.getElementById('loanDate').value||today();
   const amount=parseFloat(document.getElementById('loanAmount').value);
   const remark=document.getElementById('loanRemark').value.trim()||null;
   if(isNaN(amount)||amount<=0){alert('请填写借款金额');return;}
-  data.loans.push({id:crypto.randomUUID(),date,amount,remark});
-  save();document.getElementById('loanAmount').value='';document.getElementById('loanRemark').value='';renderAll();
+  
+  setSyncStatus('syncing', '保存中...');
+  const {error} = await supabase.from('loans').insert([{date,amount,remark}]);
+  if(error){alert('保存失败: '+error.message);setSyncStatus('error', '保存失败');return;}
+  
+  document.getElementById('loanAmount').value='';
+  document.getElementById('loanRemark').value='';
+  await loadFromSupabase();
 }
-function addRepay(){
+
+async function addRepay(){
   const date=document.getElementById('repayDate').value||today();
   const amount=parseFloat(document.getElementById('repayAmount').value);
   const remark=document.getElementById('repayRemark').value.trim()||null;
   if(isNaN(amount)||amount<=0){alert('请填写还款金额');return;}
-  data.repayments.push({id:crypto.randomUUID(),date,amount,remark});
-  save();document.getElementById('repayAmount').value='';document.getElementById('repayRemark').value='';renderAll();
+  
+  setSyncStatus('syncing', '保存中...');
+  const {error} = await supabase.from('repayments').insert([{date,amount,remark}]);
+  if(error){alert('保存失败: '+error.message);setSyncStatus('error', '保存失败');return;}
+  
+  document.getElementById('repayAmount').value='';
+  document.getElementById('repayRemark').value='';
+  await loadFromSupabase();
 }
-function delLoan(id){if(!confirm('确定删除？'))return;data.loans=data.loans.filter(r=>r.id!==id);save();renderAll();}
-function delRepay(id){if(!confirm('确定删除？'))return;data.repayments=data.repayments.filter(r=>r.id!==id);save();renderAll();}
+
+async function delLoan(id){if(!confirm('确定删除？'))return;
+  setSyncStatus('syncing', '删除中...');
+  await supabase.from('loans').delete().eq('id', id);
+  await loadFromSupabase();
+}
+
+async function delRepay(id){if(!confirm('确定删除？'))return;
+  setSyncStatus('syncing', '删除中...');
+  await supabase.from('repayments').delete().eq('id', id);
+  await loadFromSupabase();
+}
 
 function calcLoanInterest(){
   const {s:eStart,e:eEnd,days:monthDays}=monthRange(document.getElementById('curMonth').value);
   const todayStr=today();
-  const endDate=eEnd>todayStr?todayStr:eEnd; // Don't calculate future days
+  const endDate=eEnd>todayStr?todayStr:eEnd;
 
   let totalBorrowed=0, totalRepaid=0, monthInterest=0;
 
-  // Calculate interest for each loan
   data.loans.forEach(loan=>{
     totalBorrowed+=loan.amount;
-    // Loan accrues interest from loan date to end of month (or today)
     const loanStart=loan.date<eStart?eStart:loan.date;
-    if(loanStart>endDate) return; // Loan is in the future
+    if(loanStart>endDate) return;
     const days=daysBetween(loanStart,endDate);
     monthInterest+=loan.amount*DAILY_RATE*days;
   });
 
-  // Subtract interest saved by repayments
   data.repayments.forEach(repay=>{
     totalRepaid+=repay.amount;
     const repayStart=repay.date<eStart?eStart:repay.date;
@@ -332,7 +406,6 @@ function calcLoanInterest(){
 }
 
 function calcTotalAccruedInterest(){
-  // Total interest from all loans since they were taken, minus savings from repayments
   let total=0;
   const todayStr=today();
   data.loans.forEach(loan=>{
@@ -349,17 +422,25 @@ function calcTotalAccruedInterest(){
 }
 
 // ===== INCOME & EXPENSE =====
-function addInc(store){
+async function addInc(store){
   const date=document.getElementById('d'+store).value||today();
   const desc=document.getElementById('desc'+store).value.trim();
   const type=document.getElementById('type'+store).value;
   const amount=parseFloat(document.getElementById('amt'+store).value);
   const remark=document.getElementById('rmk'+store).value.trim()||null;
   if(!desc||isNaN(amount)){alert('请填写说明和金额');return;}
-  data['income'+store].push({id:crypto.randomUUID(),date,desc,type,amount,remark});
-  save();document.getElementById('desc'+store).value='';document.getElementById('amt'+store).value='';document.getElementById('rmk'+store).value='';renderAll();
+  
+  setSyncStatus('syncing', '保存中...');
+  const {error} = await supabase.from('income').insert([{date,store,desc,type,amount,remark}]);
+  if(error){alert('保存失败: '+error.message);setSyncStatus('error', '保存失败');return;}
+  
+  document.getElementById('desc'+store).value='';
+  document.getElementById('amt'+store).value='';
+  document.getElementById('rmk'+store).value='';
+  await loadFromSupabase();
 }
-function addExp(){
+
+async function addExp(){
   const date=document.getElementById('dE').value||today();
   const desc=document.getElementById('descE').value.trim();
   const cat=document.getElementById('catE').value;
@@ -367,10 +448,22 @@ function addExp(){
   const amount=parseFloat(document.getElementById('amtE').value);
   const remark=document.getElementById('rmkE').value.trim()||null;
   if(!desc||isNaN(amount)||amount<=0){alert('请填写用途和金额');return;}
-  data.expense.push({id:crypto.randomUUID(),date,desc,cat,store,amount,remark});
-  save();document.getElementById('descE').value='';document.getElementById('amtE').value='';document.getElementById('rmkE').value='';renderAll();
+  
+  setSyncStatus('syncing', '保存中...');
+  const {error} = await supabase.from('expenses').insert([{date,desc,cat,store,amount,remark}]);
+  if(error){alert('保存失败: '+error.message);setSyncStatus('error', '保存失败');return;}
+  
+  document.getElementById('descE').value='';
+  document.getElementById('amtE').value='';
+  document.getElementById('rmkE').value='';
+  await loadFromSupabase();
 }
-function delItem(list,id){if(!confirm('确定删除？'))return;data[list]=data[list].filter(r=>r.id!==id);save();renderAll();}
+
+async function delItem(table,id){if(!confirm('确定删除？'))return;
+  setSyncStatus('syncing', '删除中...');
+  await supabase.from(table).delete().eq('id', id);
+  await loadFromSupabase();
+}
 
 // ===== RENDER =====
 const catMap={cost:'货款/成本',ship:'运费/快递',brush:'刷单',platform:'平台扣点',promo:'推广费',fine:'店铺罚款',pack:'包装耗材',return:'退货损失',labor:'人工/客服',interest:'贷款利息',other:'其他'};
@@ -390,7 +483,6 @@ function renderAll(){
   renderIncTable('bodyB',mB,'cntB');
   renderExpTable(mE);
 
-  // Loan tables
   renderLoanTable(eStart,endDate);
   renderRepayTable();
 
@@ -410,7 +502,6 @@ function renderAll(){
   const half=net/2;
   const rate=totalInc>0?(net/totalInc*100):0;
 
-  // Summary
   document.getElementById('sIncA').textContent=fmt(incA);
   document.getElementById('sIncB').textContent=fmt(incB);
   document.getElementById('sExp').textContent=fmt(totalExp);
@@ -421,7 +512,6 @@ function renderAll(){
   document.getElementById('sRate').textContent=rate.toFixed(1)+'%';
   setCardClass('sGross',gross);setCardClass('sNet',net);setCardClass('sHalf',half);
 
-  // Loan summary
   document.getElementById('lTotalBorrow').textContent=fmt(totalBorrowed);
   document.getElementById('lTotalRepay').textContent=fmt(totalRepaid);
   document.getElementById('lOutstanding').textContent=fmt(outstanding);
@@ -435,7 +525,7 @@ function setCardClass(id,val){const el=document.getElementById(id);el.closest('.
 
 function renderLoanTable(eStart,endDate){
   const body=document.getElementById('loanBody');
-  if(!data.loans.length){body.innerHTML='<tr><td colspan="6" class="empty">暂无借款记录，目前还没有开始借款</td></tr>';return;}
+  if(!data.loans.length){body.innerHTML='<tr><td colspan="6" class="empty">暂无借款记录</td></tr>';return;}
   body.innerHTML=data.loans.map(r=>{
     const loanStart=r.date<eStart?eStart:r.date;
     let days=0,interest=0;
@@ -469,10 +559,10 @@ function renderIncTable(bodyId,items,cntId){
   document.getElementById(cntId).textContent=items.length+' 笔';
   if(!items.length){body.innerHTML='<tr><td colspan="6" class="empty">暂无记录</td></tr>';return;}
   const tm={sale:'销售',refund:'退款',other:'其他'};
-  const list=bodyId==='bodyA'?'incomeA':'incomeB';
+  const table = bodyId==='bodyA'?'income':'income';
   body.innerHTML=items.map(r=>{
     const cls=r.amount>=0?'amt-pos':'amt-neg';
-    return `<tr><td class="mono">${r.date}</td><td>${r.desc}</td><td><span class="tag t-cost">${tm[r.type]||r.type}</span></td><td class="mono ${cls}">${fmt(r.amount)}</td><td class="remark">${r.remark||'-'}</td><td><button class="btn-del" onclick="delItem('${list}','${r.id}')">×</button></td></tr>`;
+    return `<tr><td class="mono">${r.date}</td><td>${r.desc}</td><td><span class="tag t-cost">${tm[r.type]||r.type}</span></td><td class="mono ${cls}">${fmt(r.amount)}</td><td class="remark">${r.remark||'-'}</td><td><button class="btn-del" onclick="delItem('${table}','${r.id}')">×</button></td></tr>`;
   }).join('');
 }
 
@@ -481,20 +571,20 @@ function renderExpTable(items){
   document.getElementById('cntE').textContent=items.length+' 笔';
   if(!items.length){body.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';return;}
   body.innerHTML=items.map(r=>{
-    return `<tr><td class="mono">${r.date}</td><td>${r.desc}</td><td><span class="tag ${catCls[r.cat]||'t-other'}">${catMap[r.cat]||r.cat}</span></td><td><span class="tag ${storeCls[r.store]||'t-platform'}">${storeMap[r.store]||r.store}</span></td><td class="mono amt-neg">${fmt(r.amount)}</td><td class="remark">${r.remark||'-'}</td><td><button class="btn-del" onclick="delItem('expense','${r.id}')">×</button></td></tr>`;
+    return `<tr><td class="mono">${r.date}</td><td>${r.desc}</td><td><span class="tag ${catCls[r.cat]||'t-other'}">${catMap[r.cat]||r.cat}</span></td><td><span class="tag ${storeCls[r.store]||'t-platform'}">${storeMap[r.store]||r.store}</span></td><td class="mono amt-neg">${fmt(r.amount)}</td><td class="remark">${r.remark||'-'}</td><td><button class="btn-del" onclick="delItem('expenses','${r.id}')">×</button></td></tr>`;
   }).join('');
 }
 
 function renderPL(incA,incB,expenses,loanInt,totalInc,totalExp,gross,net,half,rate){
   const catTotals={};Object.keys(catMap).forEach(k=>catTotals[k]=0);expenses.forEach(r=>{catTotals[r.cat]=(catTotals[r.cat]||0)+r.amount;});
   let h=`<tr><td><b>收入</b></td><td></td></tr>
-    <tr class="pl-sub"><td>　内裤店收入</td><td>${fmt(incA)}</td></tr>
-    <tr class="pl-sub"><td>　衣服店收入</td><td>${fmt(incB)}</td></tr>
+    <tr class="pl-sub"><td>  内裤店收入</td><td>${fmt(incA)}</td></tr>
+    <tr class="pl-sub"><td>  衣服店收入</td><td>${fmt(incB)}</td></tr>
     <tr style="border-top:1px solid var(--border)"><td><b>收入合计</b></td><td><b>${fmt(totalInc)}</b></td></tr>
     <tr><td style="height:10px"></td><td></td></tr>
     <tr><td><b>支出</b></td><td></td></tr>`;
-  Object.entries(catMap).forEach(([k,v])=>{if(catTotals[k]>0)h+=`<tr class="pl-sub"><td>　${v}</td><td>${fmt(catTotals[k])}</td></tr>`;});
-  if(loanInt>0)h+=`<tr class="pl-sub"><td>　贷款利息（自动计算）</td><td>${fmt(loanInt)}</td></tr>`;
+  Object.entries(catMap).forEach(([k,v])=>{if(catTotals[k]>0)h+=`<tr class="pl-sub"><td>  ${v}</td><td>${fmt(catTotals[k])}</td></tr>`;});
+  if(loanInt>0)h+=`<tr class="pl-sub"><td>  贷款利息（自动计算）</td><td>${fmt(loanInt)}</td></tr>`;
   h+=`<tr style="border-top:1px solid var(--border)"><td><b>支出合计</b></td><td><b>${fmt(totalExp)}</b></td></tr>
     <tr><td style="height:10px"></td><td></td></tr>
     <tr class="pl-sep"><td>毛利润</td><td>${fmt(gross)}</td></tr>
@@ -539,32 +629,27 @@ function exportCSV(){
 
   let html=`<html><head><meta charset="UTF-8"><style>td{mso-number-format:"\\@";font-size:12px;font-family:Microsoft YaHei;}</style></head><body><table cellpadding="0" cellspacing="0">`;
 
-  // Title
-  html+=`<tr><td colspan="7" style="${th}font-size:16px;text-align:center;">淘宝记账报表 · ${month}</td></tr><tr><td colspan="7" style="${sep}"></td></tr>`;
+  html+=`<tr><td colspan="7" style="${th}font-size:16px;text-align:center;">淘宝记账报表 · ${month} · 云端同步版</td></tr><tr><td colspan="7" style="${sep}"></td></tr>`;
 
-  // 1. Summary
   html+=`<tr><td colspan="7" style="${th2}font-size:13px;">一、本月总览</td></tr>`;
   html+=`<tr><td style="${tdB}">内裤店收入</td><td style="${tdBR}">${fmt(incA)}</td><td style="${tdB}">衣服店收入</td><td style="${tdBR}">${fmt(incB)}</td><td style="${tdB}">总收入</td><td colspan="2" style="${tdBR}">${fmt(totalInc)}</td></tr>`;
   html+=`<tr><td style="${tdB}">总支出</td><td style="${tdBR}">${fmt(totalExp)}</td><td style="${tdB}">其中贷款利息</td><td style="${tdBR}">${fmt(monthInterest)}</td><td style="${tdB}">利润率</td><td colspan="2" style="${tdBR}">${rate.toFixed(2)}%</td></tr>`;
   html+=`<tr><td style="${tdB}background:#e8f5ee;">毛利润</td><td style="${tdBR}background:#e8f5ee;">${fmt(gross)}</td><td style="${tdB}background:${net>=0?'#e8f5ee':'#fcecea'};">纯利润</td><td style="${tdBR}background:${net>=0?'#e8f5ee':'#fcecea'};">${fmt(net)}</td><td style="${tdB}">每人应分</td><td colspan="2" style="${tdBR}">${fmt(half)}</td></tr>`;
   html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
 
-  // 2. Store A
+  const tm={sale:'销售',refund:'退款',other:'其他'};
   html+=`<tr><td colspan="7" style="${th2}font-size:13px;">二、内裤店收入 · ${mA.length} 笔 · 合计 ${fmt(incA)}</td></tr>`;
   html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">订单/说明</td><td style="${th}">类型</td><td style="${th}">金额</td><td colspan="2" style="${th}">备注</td></tr>`;
-  const tm={sale:'销售',refund:'退款',other:'其他'};
   if(!mA.length)html+=`<tr><td colspan="7" style="${td}text-align:center;color:#999;">暂无</td></tr>`;
   else mA.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${tm[r.type]}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td colspan="2" style="${td}">${r.remark||''}</td></tr>`;});
   html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
 
-  // 3. Store B
   html+=`<tr><td colspan="7" style="${th2}font-size:13px;">三、衣服店收入 · ${mB.length} 笔 · 合计 ${fmt(incB)}</td></tr>`;
   html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">订单/说明</td><td style="${th}">类型</td><td style="${th}">金额</td><td colspan="2" style="${th}">备注</td></tr>`;
   if(!mB.length)html+=`<tr><td colspan="7" style="${td}text-align:center;color:#999;">暂无</td></tr>`;
   else mB.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${tm[r.type]}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td colspan="2" style="${td}">${r.remark||''}</td></tr>`;});
   html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
 
-  // 4. Expenses
   const storeMap2={common:'公共',storeA:'内裤店',storeB:'衣服店'};
   html+=`<tr><td colspan="7" style="${th2}font-size:13px;">四、支出明细 · ${mE.length} 笔 · 合计 ${fmt(mE.reduce((s,r)=>s+r.amount,0))}</td></tr>`;
   html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">用途</td><td style="${th}">类别</td><td style="${th}">归属</td><td style="${th}">金额</td><td style="${th}">备注</td></tr>`;
@@ -572,37 +657,7 @@ function exportCSV(){
   else mE.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${catMap2[r.cat]||r.cat}</td><td style="${td}">${storeMap2[r.store]||r.store}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td style="${td}">${r.remark||''}</td></tr>`;});
   html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
 
-  // 5. Category breakdown
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">五、支出分类汇总</td></tr>`;
-  html+=`<tr><td style="${th}" colspan="2">类别</td><td style="${th}">金额</td><td style="${th}">占比</td><td colspan="3" style="${th}">说明</td></tr>`;
-  const catDesc={cost:'进货成本',ship:'快递物流费',brush:'刷单费用',platform:'平台扣点/技术服务费',promo:'直通车/钻展等推广',fine:'违规/延迟发货罚款',pack:'包装袋/胶带/填充物',return:'退货运费/商品损耗',labor:'客服/运营人工',interest:'手动记录的利息',other:'其他杂费'};
-  Object.entries(catMap2).forEach(([k,v])=>{const a=catTotals[k]||0;if(a>0){const p=mE.reduce((s,r)=>s+r.amount,0)>0?(a/mE.reduce((s,r)=>s+r.amount,0)*100).toFixed(1):'0.0';html+=`<tr><td style="${tdB}" colspan="2">${v}</td><td style="${tdR}">${fmt(a)}</td><td style="${tdR}">${p}%</td><td style="${td}" colspan="3">${catDesc[k]||''}</td></tr>`;}});
-  if(monthInterest>0)html+=`<tr><td style="${tdB}" colspan="2">贷款利息（自动）</td><td style="${tdR}">${fmt(monthInterest)}</td><td style="${tdR}">-</td><td style="${td}" colspan="3">按每笔借款实际天数×日利率0.0483%计算</td></tr>`;
-  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
-
-  // 6. Store expense breakdown
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">六、支出归属分析</td></tr>`;
-  html+=`<tr><td style="${th}" colspan="2">归属</td><td style="${th}">金额</td><td style="${th}">占比</td><td colspan="3" style="${th}">说明</td></tr>`;
-  const totalExpAmt=mE.reduce((s,r)=>s+r.amount,0);
-  html+=`<tr><td style="${tdB}" colspan="2">内裤店</td><td style="${tdR}">${fmt(expA)}</td><td style="${tdR}">${totalExpAmt>0?(expA/totalExpAmt*100).toFixed(1):'0.0'}%</td><td colspan="3" style="${td}">直接归属内裤店</td></tr>`;
-  html+=`<tr><td style="${tdB}" colspan="2">衣服店</td><td style="${tdR}">${fmt(expB)}</td><td style="${tdR}">${totalExpAmt>0?(expB/totalExpAmt*100).toFixed(1):'0.0'}%</td><td colspan="3" style="${td}">直接归属衣服店</td></tr>`;
-  html+=`<tr><td style="${tdB}" colspan="2">公共均摊</td><td style="${tdR}">${fmt(expC)}</td><td style="${tdR}">${totalExpAmt>0?(expC/totalExpAmt*100).toFixed(1):'0.0'}%</td><td colspan="3" style="${td}">两家各承担 ${fmt(expC/2)}</td></tr>`;
-  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
-
-  // 7. Per-store P&L
-  const storeAProfit=incA-expA-expC/2-monthInterest/2;
-  const storeBProfit=incB-expB-expC/2-monthInterest/2;
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">七、单店利润（公共支出各50%）</td></tr>`;
-  html+=`<tr><td style="${th}" colspan="2">项目</td><td style="${th}">内裤店</td><td style="${th}">衣服店</td><td style="${th}" colspan="3">合计</td></tr>`;
-  html+=`<tr><td style="${tdB}" colspan="2">收入</td><td style="${tdR}">${fmt(incA)}</td><td style="${tdR}">${fmt(incB)}</td><td style="${tdR}" colspan="3">${fmt(totalInc)}</td></tr>`;
-  html+=`<tr><td style="${tdB}" colspan="2">直接支出</td><td style="${tdR}">${fmt(expA)}</td><td style="${tdR}">${fmt(expB)}</td><td style="${tdR}" colspan="3">${fmt(expA+expB)}</td></tr>`;
-  html+=`<tr><td style="${tdB}" colspan="2">公共50%</td><td style="${tdR}">${fmt(expC/2)}</td><td style="${tdR}">${fmt(expC/2)}</td><td style="${tdR}" colspan="3">${fmt(expC)}</td></tr>`;
-  html+=`<tr><td style="${tdB}" colspan="2">利息50%</td><td style="${tdR}">${fmt(monthInterest/2)}</td><td style="${tdR}">${fmt(monthInterest/2)}</td><td style="${tdR}" colspan="3">${fmt(monthInterest)}</td></tr>`;
-  html+=`<tr><td style="${tdB}background:${storeAProfit>=0?'#e8f5ee':'#fcecea'};" colspan="2">单店利润</td><td style="${tdBR}background:${storeAProfit>=0?'#e8f5ee':'#fcecea'};">${fmt(storeAProfit)}</td><td style="${tdBR}background:${storeBProfit>=0?'#e8f5ee':'#fcecea'};">${fmt(storeBProfit)}</td><td style="${tdBR}" colspan="3">${fmt(storeAProfit+storeBProfit)}</td></tr>`;
-  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
-
-  // 8. Loans detail
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">八、贷款明细</td></tr>`;
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">五、贷款明细</td></tr>`;
   html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">类型</td><td style="${th}">金额</td><td style="${th}">本月计息天数</td><td style="${th}">本月利息</td><td style="${th}">备注</td></tr>`;
   data.loans.forEach((r,i)=>{
     const loanStart=r.date<eStart?eStart:r.date;
@@ -614,11 +669,9 @@ function exportCSV(){
   });
   html+=`<tr><td style="${tdB}" colspan="3">累计借款</td><td style="${tdBR}">${fmt(totalBorrowed)}</td><td style="${tdB}">累计还款</td><td style="${tdBR}" colspan="2">${fmt(totalRepaid)}</td></tr>`;
   html+=`<tr><td style="${tdB}" colspan="3">未还本金</td><td style="${tdBR}">${fmt(outstanding)}</td><td style="${tdB}">本月利息</td><td style="${tdBR}" colspan="2">${fmt(monthInterest)}</td></tr>`;
-  html+=`<tr><td style="${tdB}" colspan="3">累计利息总额</td><td style="${tdBR}" colspan="4">${fmt(totalAccruedInt)}</td></tr>`;
   html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
 
-  // Footer
-  html+=`<tr><td colspan="7" style="padding:10px;font-size:11px;color:#999;text-align:center;">淘宝记账报表 · 生成时间：${new Date().toLocaleString('zh-CN')} · 年利率17.64%单利 · 日利率0.0483%</td></tr>`;
+  html+=`<tr><td colspan="7" style="padding:10px;font-size:11px;color:#999;text-align:center;">淘宝记账报表 · 云端同步版 · 生成时间：${new Date().toLocaleString('zh-CN')} · 年利率17.64%单利</td></tr>`;
   html+=`</table></body></html>`;
 
   const blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8;'});
