@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>淘宝记账 · 双店铺利润表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f5f0; --surface: #ffffff; --accent: #c4501a; --accent-light: #fdf0ec;
+    --text-primary: #1a1a1a; --text-secondary: #6b6560; --text-muted: #a09a93;
+    --border: #e5e1da; --green: #1d7a46; --green-light: #e6f4ec;
+    --red: #b83228; --red-light: #fcecea; --blue: #2563a8; --blue-light: #e8f0fa;
+    --yellow: #a67c00; --yellow-light: #fdf6e3; --purple: #6b3fa0; --purple-light: #f0eaf5;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text-primary);line-height:1.6}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .container{max-width:1280px;margin:0 auto;padding:28px 20px 80px}
+
+  .header{margin-bottom:28px;animation:fadeDown .5s ease}
+  .header-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px}
+  .header h1{font-size:26px;font-weight:700;letter-spacing:-.5px}
+  .header h1 span{color:var(--accent)}
+  .header-sub{font-size:13px;color:var(--text-secondary);margin-top:3px}
+  .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .month-sel{display:flex;align-items:center;gap:6px;background:var(--surface);padding:7px 14px;border-radius:8px;border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+  .month-sel label{color:var(--text-secondary);font-size:13px;font-weight:500}
+  .month-sel input{border:none;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-primary);background:transparent;outline:none;width:115px}
+  .btn-top{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text-secondary);transition:all .2s;font-family:'Noto Sans SC',sans-serif;box-shadow:var(--shadow-sm)}
+  .btn-top:hover{border-color:var(--accent);color:var(--accent)}
+
+  .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px}
+  .sum-card{background:var(--surface);border-radius:10px;padding:14px;border:1px solid var(--border);box-shadow:var(--shadow-sm);animation:fadeUp .5s ease both}
+  .sum-card:nth-child(1){animation-delay:.03s}.sum-card:nth-child(2){animation-delay:.06s}
+  .sum-card:nth-child(3){animation-delay:.09s}.sum-card:nth-child(4){animation-delay:.12s}
+  .sum-card:nth-child(5){animation-delay:.15s}.sum-card:nth-child(6){animation-delay:.18s}
+  .sum-card:nth-child(7){animation-delay:.21s}.sum-card:nth-child(8){animation-delay:.24s}
+  .sum-card .lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:500;margin-bottom:3px}
+  .sum-card .val{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:500}
+  .sum-card .sub{font-size:10px;color:var(--text-secondary);margin-top:1px}
+  .sum-card.pos .val{color:var(--green)}.sum-card.neg .val{color:var(--red)}
+
+  .sec{background:var(--surface);border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm);margin-bottom:18px;overflow:hidden;animation:fadeUp .5s ease both}
+  .sec-hd{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
+  .sec-hd h2{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .sec-hd h2 .ic{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .ic-blue{background:var(--blue-light);color:var(--blue)}.ic-green{background:var(--green-light);color:var(--green)}
+  .ic-purple{background:var(--purple-light);color:var(--purple)}.ic-yellow{background:var(--yellow-light);color:var(--yellow)}
+  .ic-red{background:var(--red-light);color:var(--red)}
+  .badge{font-size:10px;padding:2px 9px;border-radius:20px;font-weight:500;font-family:'JetBrains Mono',monospace}
+  .badge-blue{background:var(--blue-light);color:var(--blue)}.badge-green{background:var(--green-light);color:var(--green)}
+
+  .tw{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead th{background:#faf9f6;padding:8px 12px;text-align:left;font-weight:500;color:var(--text-secondary);font-size:11px;letter-spacing:.3px;border-bottom:1px solid var(--border);white-space:nowrap}
+  tbody td{padding:8px 12px;border-bottom:1px solid #f0ede8;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#faf9f6}
+  .amt-pos{color:var(--green);font-weight:500}.amt-neg{color:var(--red);font-weight:500}
+  .tag{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:500}
+  .t-cost{background:var(--blue-light);color:var(--blue)}.t-ship{background:var(--yellow-light);color:var(--yellow)}
+  .t-brush{background:var(--purple-light);color:var(--purple)}.t-platform{background:#f0ede8;color:var(--text-secondary)}
+  .t-promo{background:var(--accent-light);color:var(--accent)}.t-fine{background:var(--red-light);color:var(--red)}
+  .t-pack{background:var(--green-light);color:var(--green)}.t-return{background:#fce8e8;color:#a03030}
+  .t-labor{background:#e8eaf5;color:#3949ab}.t-interest{background:#f3e5f5;color:#7b1fa2}
+  .t-other{background:#f0ede8;color:var(--text-muted)}.t-loan{background:#f3e5f5;color:#7b1fa2}
+  .t-repay{background:#e6f4ec;color:#1d7a46}
+  .remark{color:var(--text-muted);font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .empty{text-align:center;padding:28px;color:var(--text-muted);font-size:12px}
+
+  .add-row{display:flex;gap:5px;padding:9px 12px;background:#faf9f6;border-top:1px solid var(--border);align-items:center;flex-wrap:wrap}
+  .add-row input,.add-row select{border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;font-family:'Noto Sans SC',sans-serif;color:var(--text-primary);background:var(--surface);outline:none;transition:border-color .2s}
+  .add-row input:focus,.add-row select:focus{border-color:var(--accent)}
+  .add-row input::placeholder{color:var(--text-muted)}
+  .add-row input[type="date"]{width:115px}.add-row input[type="number"]{width:80px}
+  .btn-add{background:var(--text-primary);color:#fff;border:none;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .2s;font-family:'Noto Sans SC',sans-serif}
+  .btn-add:hover{background:var(--accent)}
+  .btn-del{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:15px;padding:1px 5px;border-radius:3px;transition:color .2s,background .2s}
+  .btn-del:hover{color:var(--red);background:var(--red-light)}
+
+  .pl-wrap{padding:18px}
+  .pl-table{width:100%;max-width:500px}
+  .pl-table tr td{padding:6px 0;font-size:13px}
+  .pl-table tr td:last-child{text-align:right;font-family:'JetBrains Mono',monospace}
+  .pl-table .pl-sep td{border-top:2px solid var(--text-primary);padding-top:10px;font-weight:700;font-size:15px}
+  .pl-table .pl-sub{color:var(--text-secondary);font-size:12px}
+
+  .loan-summary{display:flex;gap:20px;padding:14px 18px;background:#faf9f6;border-bottom:1px solid var(--border);flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
+  .loan-summary span b{font-family:'JetBrains Mono',monospace;color:var(--text-primary)}
+
+  .notes{margin-top:24px;padding:16px 18px;background:var(--surface);border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+  .notes h3{font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary)}
+  .notes ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+  .notes li{font-size:11px;color:var(--text-muted);padding-left:14px;position:relative}
+  .notes li::before{content:'·';position:absolute;left:0;color:var(--accent);font-weight:700;font-size:16px;line-height:1}
+  .footer{text-align:center;margin-top:32px;font-size:10px;color:var(--text-muted)}
+
+  @media print{body{background:#fff}.header-right,.add-row,.btn-del,.btn-top,.notes{display:none!important}.container{padding:10px}.sec{break-inside:avoid;box-shadow:none;border:1px solid #ddd}.sum-card{box-shadow:none;border:1px solid #ddd}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+  @media(max-width:768px){.container{padding:14px 10px 60px}.header h1{font-size:20px}.sum-grid{grid-template-columns:repeat(2,1fr)}.add-row{flex-wrap:wrap}.add-row input[type="date"]{width:100%}}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1>淘宝<span>记账</span></h1>
+        <p class="header-sub">双店铺利润表 · 内裤店 + 衣服店 · 分批借款 · 50/50分账</p>
+      </div>
+      <div class="header-right">
+        <div class="month-sel"><label>账期</label><input type="month" id="curMonth" onchange="renderAll()"></div>
+        <button class="btn-top" onclick="exportCSV()">导出Excel</button>
+        <button class="btn-top" onclick="window.print()">打印/PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="sum-grid">
+    <div class="sum-card"><div class="lbl">内裤店收入</div><div class="val" id="sIncA">¥0</div><div class="sub">店铺A</div></div>
+    <div class="sum-card"><div class="lbl">衣服店收入</div><div class="val" id="sIncB">¥0</div><div class="sub">店铺B</div></div>
+    <div class="sum-card"><div class="lbl">总支出</div><div class="val" id="sExp">¥0</div><div class="sub">本月累计</div></div>
+    <div class="sum-card"><div class="lbl">贷款利息</div><div class="val" id="sInt">¥0</div><div class="sub">本月应付</div></div>
+    <div class="sum-card"><div class="lbl">毛利润</div><div class="val" id="sGross">¥0</div><div class="sub">收入−货款−运费</div></div>
+    <div class="sum-card"><div class="lbl">纯利润</div><div class="val" id="sNet">¥0</div><div class="sub">收入−全部支出</div></div>
+    <div class="sum-card"><div class="lbl">每人应分</div><div class="val" id="sHalf">¥0</div><div class="sub">纯利 ÷ 2</div></div>
+    <div class="sum-card"><div class="lbl">利润率</div><div class="val" id="sRate">0%</div><div class="sub">纯利 ÷ 收入</div></div>
+  </div>
+
+  <!-- Loans -->
+  <div class="sec" style="animation-delay:.05s">
+    <div class="sec-hd">
+      <h2><span class="ic" style="background:#f3e5f5;color:#7b1fa2">借</span> 贷款管理</h2>
+      <span style="font-size:11px;color:var(--text-muted)">年利率 17.64% 单利 · 日利率 0.0483%</span>
+    </div>
+    <div class="loan-summary" id="loanSummary">
+      <span>累计借款: <b id="lTotalBorrow">¥0</b></span>
+      <span>累计还款: <b id="lTotalRepay">¥0</b></span>
+      <span>未还本金: <b id="lOutstanding">¥0</b></span>
+      <span>本月利息: <b id="lMonthInt">¥0</b></span>
+      <span>累计利息: <b id="lTotalInt">¥0</b></span>
+    </div>
+    <!-- Borrow table -->
+    <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:var(--text-secondary)">借款记录</div>
+    <div class="tw"><table>
+      <thead><tr><th>日期</th><th>借款金额 (¥)</th><th>已计息天数</th><th>本月利息 (¥)</th><th>备注</th><th></th></tr></thead>
+      <tbody id="loanBody"></tbody>
+    </table></div>
+    <div class="add-row">
+      <input type="date" id="loanDate">
+      <input type="number" id="loanAmount" placeholder="借款金额" step="100" min="0" style="width:110px">
+      <input type="text" id="loanRemark" placeholder="备注（选填）" style="flex:1;min-width:100px">
+      <button class="btn-add" onclick="addLoan()">+ 添加借款</button>
+    </div>
+    <!-- Repay table -->
+    <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:var(--text-secondary);border-top:1px solid var(--border)">还款记录</div>
+    <div class="tw"><table>
+      <thead><tr><th>日期</th><th>还款金额 (¥)</th><th>备注</th><th></th></tr></thead>
+      <tbody id="repayBody"></tbody>
+    </table></div>
+    <div class="add-row">
+      <input type="date" id="repayDate">
+      <input type="number" id="repayAmount" placeholder="还款金额" step="100" min="0" style="width:110px">
+      <input type="text" id="repayRemark" placeholder="备注（选填）" style="flex:1;min-width:100px">
+      <button class="btn-add" onclick="addRepay()">+ 添加还款</button>
+    </div>
+  </div>
+
+  <!-- Store A Income -->
+  <div class="sec" style="animation-delay:.08s">
+    <div class="sec-hd">
+      <h2><span class="ic ic-green">A</span> 内裤店 · 收入明细</h2>
+      <span class="badge badge-green" id="cntA">0 笔</span>
+    </div>
+    <div class="tw"><table><thead><tr><th>日期</th><th>订单/说明</th><th>类型</th><th>金额 (¥)</th><th>备注</th><th></th></tr></thead><tbody id="bodyA"></tbody></table></div>
+    <div class="add-row">
+      <input type="date" id="dA">
+      <input type="text" id="descA" placeholder="订单号或说明" style="flex:1;min-width:110px">
+      <select id="typeA"><option value="sale">销售</option><option value="refund">退款</option><option value="other">其他</option></select>
+      <input type="number" id="amtA" placeholder="金额" step="0.01">
+      <input type="text" id="rmkA" placeholder="备注" style="width:90px">
+      <button class="btn-add" onclick="addInc('A')">+ 记一笔</button>
+    </div>
+  </div>
+
+  <!-- Store B Income -->
+  <div class="sec" style="animation-delay:.11s">
+    <div class="sec-hd">
+      <h2><span class="ic ic-purple">B</span> 衣服店 · 收入明细</h2>
+      <span class="badge badge-green" id="cntB">0 笔</span>
+    </div>
+    <div class="tw"><table><thead><tr><th>日期</th><th>订单/说明</th><th>类型</th><th>金额 (¥)</th><th>备注</th><th></th></tr></thead><tbody id="bodyB"></tbody></table></div>
+    <div class="add-row">
+      <input type="date" id="dB">
+      <input type="text" id="descB" placeholder="订单号或说明" style="flex:1;min-width:110px">
+      <select id="typeB"><option value="sale">销售</option><option value="refund">退款</option><option value="other">其他</option></select>
+      <input type="number" id="amtB" placeholder="金额" step="0.01">
+      <input type="text" id="rmkB" placeholder="备注" style="width:90px">
+      <button class="btn-add" onclick="addInc('B')">+ 记一笔</button>
+    </div>
+  </div>
+
+  <!-- Expenses -->
+  <div class="sec" style="animation-delay:.14s">
+    <div class="sec-hd">
+      <h2><span class="ic ic-red">支</span> 支出明细</h2>
+      <span class="badge badge-blue" id="cntE">0 笔</span>
+    </div>
+    <div class="tw"><table><thead><tr><th>日期</th><th>用途说明</th><th>类别</th><th>归属</th><th>金额 (¥)</th><th>备注</th><th></th></tr></thead><tbody id="bodyE"></tbody></table></div>
+    <div class="add-row">
+      <input type="date" id="dE">
+      <input type="text" id="descE" placeholder="用途说明" style="flex:1;min-width:100px">
+      <select id="catE">
+        <option value="cost">货款/成本</option><option value="ship">运费/快递</option><option value="brush">刷单</option>
+        <option value="platform">平台扣点/佣金</option><option value="promo">推广费</option><option value="fine">店铺罚款</option>
+        <option value="pack">包装耗材</option><option value="return">退货损失</option><option value="labor">人工/客服</option>
+        <option value="interest">贷款利息</option><option value="other">其他</option>
+      </select>
+      <select id="storeE"><option value="common">公共</option><option value="storeA">内裤店</option><option value="storeB">衣服店</option></select>
+      <input type="number" id="amtE" placeholder="金额" step="0.01" min="0">
+      <input type="text" id="rmkE" placeholder="备注" style="width:90px">
+      <button class="btn-add" onclick="addExp()">+ 记一笔</button>
+    </div>
+  </div>
+
+  <!-- P&L -->
+  <div class="sec" style="animation-delay:.17s">
+    <div class="sec-hd"><h2><span class="ic ic-yellow">表</span> 本月利润表（自动生成）</h2></div>
+    <div class="pl-wrap"><table class="pl-table" id="plTable"></table></div>
+  </div>
+
+  <div class="notes">
+    <h3>使用说明</h3>
+    <ul>
+      <li><b>纯利润 = 总收入 − 全部支出（含贷款利息）</b></li>
+      <li><b>毛利润 = 总收入 − 货款 − 运费</b>（衡量商品本身是否赚钱）</li>
+      <li>贷款利息按每笔借款的实际天数计算，单利 17.64%/年，日利率 ≈ 0.0483%</li>
+      <li>退款请填负数金额（如 -58.00），建议退款完成后再结算当月数据</li>
+      <li>行业利润率一般在 5%-15%，低于 5% 需关注成本控制</li>
+      <li>数据保存在浏览器本地，建议每月导出 Excel 备份</li>
+      <li>点击"打印/PDF"可生成对账单发给合伙人</li>
+    </ul>
+  </div>
+  <div class="footer">淘宝记账 · 双店铺利润表</div>
+</div>
+
+<script>
+const K='taobao_bookkeeping_v3';
+let data;
+const DAILY_RATE=17.64/365/100; // 0.000483...
+
+function load(){
+  const r=localStorage.getItem(K);
+  if(r){
+    data=JSON.parse(r);
+    // Migrate from old format
+    if(data.loan && !data.loans){data.loans=[];data.repayments=[];delete data.loan;}
+    if(!data.loans) data.loans=[];
+    if(!data.repayments) data.repayments=[];
+  } else {
+    data={incomeA:[],incomeB:[],expense:[],loans:[],repayments:[]};
+  }
+}
+function save(){localStorage.setItem(K,JSON.stringify(data));}
+function fmt(n){return'¥'+Number(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function today(){return new Date().toISOString().split('T')[0];}
+function monthRange(m){const[y,mo]=m.split('-').map(Number);const s=`${y}-${String(mo).padStart(2,'0')}-01`;const l=new Date(y,mo,0).getDate();const e=`${y}-${String(mo).padStart(2,'0')}-${String(l).padStart(2,'0')}`;return{s,e,days:l};}
+function filterMonth(arr){const m=document.getElementById('curMonth').value;return arr.filter(r=>r.date&&r.date.slice(0,7)===m);}
+function daysBetween(a,b){return Math.max(0,Math.ceil((new Date(b)-new Date(a))/(1000*60*60*24)));}
+
+function init(){
+  load();
+  document.getElementById('curMonth').value=new Date().toISOString().slice(0,7);
+  const t=today();
+  ['dA','dB','dE','loanDate','repayDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  renderAll();
+}
+
+// ===== LOAN MANAGEMENT =====
+function addLoan(){
+  const date=document.getElementById('loanDate').value||today();
+  const amount=parseFloat(document.getElementById('loanAmount').value);
+  const remark=document.getElementById('loanRemark').value.trim()||null;
+  if(isNaN(amount)||amount<=0){alert('请填写借款金额');return;}
+  data.loans.push({id:crypto.randomUUID(),date,amount,remark});
+  save();document.getElementById('loanAmount').value='';document.getElementById('loanRemark').value='';renderAll();
+}
+function addRepay(){
+  const date=document.getElementById('repayDate').value||today();
+  const amount=parseFloat(document.getElementById('repayAmount').value);
+  const remark=document.getElementById('repayRemark').value.trim()||null;
+  if(isNaN(amount)||amount<=0){alert('请填写还款金额');return;}
+  data.repayments.push({id:crypto.randomUUID(),date,amount,remark});
+  save();document.getElementById('repayAmount').value='';document.getElementById('repayRemark').value='';renderAll();
+}
+function delLoan(id){if(!confirm('确定删除？'))return;data.loans=data.loans.filter(r=>r.id!==id);save();renderAll();}
+function delRepay(id){if(!confirm('确定删除？'))return;data.repayments=data.repayments.filter(r=>r.id!==id);save();renderAll();}
+
+function calcLoanInterest(){
+  const {s:eStart,e:eEnd,days:monthDays}=monthRange(document.getElementById('curMonth').value);
+  const todayStr=today();
+  const endDate=eEnd>todayStr?todayStr:eEnd; // Don't calculate future days
+
+  let totalBorrowed=0, totalRepaid=0, monthInterest=0;
+
+  // Calculate interest for each loan
+  data.loans.forEach(loan=>{
+    totalBorrowed+=loan.amount;
+    // Loan accrues interest from loan date to end of month (or today)
+    const loanStart=loan.date<eStart?eStart:loan.date;
+    if(loanStart>endDate) return; // Loan is in the future
+    const days=daysBetween(loanStart,endDate);
+    monthInterest+=loan.amount*DAILY_RATE*days;
+  });
+
+  // Subtract interest saved by repayments
+  data.repayments.forEach(repay=>{
+    totalRepaid+=repay.amount;
+    const repayStart=repay.date<eStart?eStart:repay.date;
+    if(repayStart>endDate) return;
+    const days=daysBetween(repayStart,endDate);
+    monthInterest-=repay.amount*DAILY_RATE*days;
+  });
+
+  monthInterest=Math.max(0,monthInterest);
+  return {totalBorrowed,totalRepaid,monthInterest};
+}
+
+function calcTotalAccruedInterest(){
+  // Total interest from all loans since they were taken, minus savings from repayments
+  let total=0;
+  const todayStr=today();
+  data.loans.forEach(loan=>{
+    if(loan.date>todayStr) return;
+    const days=daysBetween(loan.date,todayStr);
+    total+=loan.amount*DAILY_RATE*days;
+  });
+  data.repayments.forEach(repay=>{
+    if(repay.date>todayStr) return;
+    const days=daysBetween(repay.date,todayStr);
+    total-=repay.amount*DAILY_RATE*days;
+  });
+  return Math.max(0,total);
+}
+
+// ===== INCOME & EXPENSE =====
+function addInc(store){
+  const date=document.getElementById('d'+store).value||today();
+  const desc=document.getElementById('desc'+store).value.trim();
+  const type=document.getElementById('type'+store).value;
+  const amount=parseFloat(document.getElementById('amt'+store).value);
+  const remark=document.getElementById('rmk'+store).value.trim()||null;
+  if(!desc||isNaN(amount)){alert('请填写说明和金额');return;}
+  data['income'+store].push({id:crypto.randomUUID(),date,desc,type,amount,remark});
+  save();document.getElementById('desc'+store).value='';document.getElementById('amt'+store).value='';document.getElementById('rmk'+store).value='';renderAll();
+}
+function addExp(){
+  const date=document.getElementById('dE').value||today();
+  const desc=document.getElementById('descE').value.trim();
+  const cat=document.getElementById('catE').value;
+  const store=document.getElementById('storeE').value;
+  const amount=parseFloat(document.getElementById('amtE').value);
+  const remark=document.getElementById('rmkE').value.trim()||null;
+  if(!desc||isNaN(amount)||amount<=0){alert('请填写用途和金额');return;}
+  data.expense.push({id:crypto.randomUUID(),date,desc,cat,store,amount,remark});
+  save();document.getElementById('descE').value='';document.getElementById('amtE').value='';document.getElementById('rmkE').value='';renderAll();
+}
+function delItem(list,id){if(!confirm('确定删除？'))return;data[list]=data[list].filter(r=>r.id!==id);save();renderAll();}
+
+// ===== RENDER =====
+const catMap={cost:'货款/成本',ship:'运费/快递',brush:'刷单',platform:'平台扣点',promo:'推广费',fine:'店铺罚款',pack:'包装耗材',return:'退货损失',labor:'人工/客服',interest:'贷款利息',other:'其他'};
+const catCls={cost:'t-cost',ship:'t-ship',brush:'t-brush',platform:'t-platform',promo:'t-promo',fine:'t-fine',pack:'t-pack',return:'t-return',labor:'t-labor',interest:'t-interest',other:'t-other'};
+const storeMap={common:'公共',storeA:'内裤店',storeB:'衣服店'};
+const storeCls={common:'t-platform',storeA:'t-cost',storeB:'t-brush'};
+
+function renderAll(){
+  const mA=filterMonth(data.incomeA);
+  const mB=filterMonth(data.incomeB);
+  const mE=filterMonth(data.expense);
+  const {s:eStart,e:eEnd}=monthRange(document.getElementById('curMonth').value);
+  const todayStr=today();
+  const endDate=eEnd>todayStr?todayStr:eEnd;
+
+  renderIncTable('bodyA',mA,'cntA');
+  renderIncTable('bodyB',mB,'cntB');
+  renderExpTable(mE);
+
+  // Loan tables
+  renderLoanTable(eStart,endDate);
+  renderRepayTable();
+
+  const incA=mA.reduce((s,r)=>s+r.amount,0);
+  const incB=mB.reduce((s,r)=>s+r.amount,0);
+  const totalInc=incA+incB;
+  const totalExp=mE.reduce((s,r)=>s+r.amount,0);
+
+  const {totalBorrowed,totalRepaid,monthInterest}=calcLoanInterest();
+  const totalAccruedInt=calcTotalAccruedInterest();
+  const outstanding=Math.max(0,totalBorrowed-totalRepaid);
+  const totalWithLoan=totalExp+monthInterest;
+  const cost=mE.filter(r=>r.cat==='cost').reduce((s,r)=>s+r.amount,0);
+  const ship=mE.filter(r=>r.cat==='ship').reduce((s,r)=>s+r.amount,0);
+  const gross=totalInc-cost-ship;
+  const net=totalInc-totalWithLoan;
+  const half=net/2;
+  const rate=totalInc>0?(net/totalInc*100):0;
+
+  // Summary
+  document.getElementById('sIncA').textContent=fmt(incA);
+  document.getElementById('sIncB').textContent=fmt(incB);
+  document.getElementById('sExp').textContent=fmt(totalExp);
+  document.getElementById('sInt').textContent=fmt(monthInterest);
+  document.getElementById('sGross').textContent=fmt(gross);
+  document.getElementById('sNet').textContent=fmt(net);
+  document.getElementById('sHalf').textContent=fmt(half);
+  document.getElementById('sRate').textContent=rate.toFixed(1)+'%';
+  setCardClass('sGross',gross);setCardClass('sNet',net);setCardClass('sHalf',half);
+
+  // Loan summary
+  document.getElementById('lTotalBorrow').textContent=fmt(totalBorrowed);
+  document.getElementById('lTotalRepay').textContent=fmt(totalRepaid);
+  document.getElementById('lOutstanding').textContent=fmt(outstanding);
+  document.getElementById('lMonthInt').textContent=fmt(monthInterest);
+  document.getElementById('lTotalInt').textContent=fmt(totalAccruedInt);
+
+  renderPL(incA,incB,mE,monthInterest,totalInc,totalWithLoan,gross,net,half,rate);
+}
+
+function setCardClass(id,val){const el=document.getElementById(id);el.closest('.sum-card').className='sum-card '+(val>=0?'pos':'neg');}
+
+function renderLoanTable(eStart,endDate){
+  const body=document.getElementById('loanBody');
+  if(!data.loans.length){body.innerHTML='<tr><td colspan="6" class="empty">暂无借款记录，目前还没有开始借款</td></tr>';return;}
+  body.innerHTML=data.loans.map(r=>{
+    const loanStart=r.date<eStart?eStart:r.date;
+    let days=0,interest=0;
+    if(loanStart<=endDate){days=daysBetween(loanStart,endDate);interest=r.amount*DAILY_RATE*days;}
+    return `<tr>
+      <td class="mono">${r.date}</td>
+      <td class="mono amt-neg">${fmt(r.amount)}</td>
+      <td class="mono">${days} 天</td>
+      <td class="mono">${fmt(interest)}</td>
+      <td class="remark">${r.remark||'-'}</td>
+      <td><button class="btn-del" onclick="delLoan('${r.id}')">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderRepayTable(){
+  const body=document.getElementById('repayBody');
+  if(!data.repayments.length){body.innerHTML='<tr><td colspan="4" class="empty">暂无还款记录</td></tr>';return;}
+  body.innerHTML=data.repayments.map(r=>{
+    return `<tr>
+      <td class="mono">${r.date}</td>
+      <td class="mono amt-pos">${fmt(r.amount)}</td>
+      <td class="remark">${r.remark||'-'}</td>
+      <td><button class="btn-del" onclick="delRepay('${r.id}')">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderIncTable(bodyId,items,cntId){
+  const body=document.getElementById(bodyId);
+  document.getElementById(cntId).textContent=items.length+' 笔';
+  if(!items.length){body.innerHTML='<tr><td colspan="6" class="empty">暂无记录</td></tr>';return;}
+  const tm={sale:'销售',refund:'退款',other:'其他'};
+  const list=bodyId==='bodyA'?'incomeA':'incomeB';
+  body.innerHTML=items.map(r=>{
+    const cls=r.amount>=0?'amt-pos':'amt-neg';
+    return `<tr><td class="mono">${r.date}</td><td>${r.desc}</td><td><span class="tag t-cost">${tm[r.type]||r.type}</span></td><td class="mono ${cls}">${fmt(r.amount)}</td><td class="remark">${r.remark||'-'}</td><td><button class="btn-del" onclick="delItem('${list}','${r.id}')">×</button></td></tr>`;
+  }).join('');
+}
+
+function renderExpTable(items){
+  const body=document.getElementById('bodyE');
+  document.getElementById('cntE').textContent=items.length+' 笔';
+  if(!items.length){body.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';return;}
+  body.innerHTML=items.map(r=>{
+    return `<tr><td class="mono">${r.date}</td><td>${r.desc}</td><td><span class="tag ${catCls[r.cat]||'t-other'}">${catMap[r.cat]||r.cat}</span></td><td><span class="tag ${storeCls[r.store]||'t-platform'}">${storeMap[r.store]||r.store}</span></td><td class="mono amt-neg">${fmt(r.amount)}</td><td class="remark">${r.remark||'-'}</td><td><button class="btn-del" onclick="delItem('expense','${r.id}')">×</button></td></tr>`;
+  }).join('');
+}
+
+function renderPL(incA,incB,expenses,loanInt,totalInc,totalExp,gross,net,half,rate){
+  const catTotals={};Object.keys(catMap).forEach(k=>catTotals[k]=0);expenses.forEach(r=>{catTotals[r.cat]=(catTotals[r.cat]||0)+r.amount;});
+  let h=`<tr><td><b>收入</b></td><td></td></tr>
+    <tr class="pl-sub"><td>　内裤店收入</td><td>${fmt(incA)}</td></tr>
+    <tr class="pl-sub"><td>　衣服店收入</td><td>${fmt(incB)}</td></tr>
+    <tr style="border-top:1px solid var(--border)"><td><b>收入合计</b></td><td><b>${fmt(totalInc)}</b></td></tr>
+    <tr><td style="height:10px"></td><td></td></tr>
+    <tr><td><b>支出</b></td><td></td></tr>`;
+  Object.entries(catMap).forEach(([k,v])=>{if(catTotals[k]>0)h+=`<tr class="pl-sub"><td>　${v}</td><td>${fmt(catTotals[k])}</td></tr>`;});
+  if(loanInt>0)h+=`<tr class="pl-sub"><td>　贷款利息（自动计算）</td><td>${fmt(loanInt)}</td></tr>`;
+  h+=`<tr style="border-top:1px solid var(--border)"><td><b>支出合计</b></td><td><b>${fmt(totalExp)}</b></td></tr>
+    <tr><td style="height:10px"></td><td></td></tr>
+    <tr class="pl-sep"><td>毛利润</td><td>${fmt(gross)}</td></tr>
+    <tr class="pl-sep"><td>纯利润</td><td>${fmt(net)}</td></tr>
+    <tr><td>每人应分 (50/50)</td><td style="font-weight:600">${fmt(half)}</td></tr>
+    <tr><td style="color:var(--text-muted);font-size:12px">利润率</td><td style="color:var(--text-muted);font-size:12px">${rate.toFixed(1)}%</td></tr>`;
+  document.getElementById('plTable').innerHTML=h;
+}
+
+// ===== EXPORT =====
+function exportCSV(){
+  const mA=filterMonth(data.incomeA);const mB=filterMonth(data.incomeB);const mE=filterMonth(data.expense);
+  const month=document.getElementById('curMonth').value;
+  const {totalBorrowed,totalRepaid,monthInterest}=calcLoanInterest();
+  const {s:eStart,e:eEnd}=monthRange(month);
+  const todayStr=today();const endDate=eEnd>todayStr?todayStr:eEnd;
+
+  const incA=mA.reduce((s,r)=>s+r.amount,0);
+  const incB=mB.reduce((s,r)=>s+r.amount,0);
+  const totalInc=incA+incB;
+  const totalExp=mE.reduce((s,r)=>s+r.amount,0)+monthInterest;
+  const cost=mE.filter(r=>r.cat==='cost').reduce((s,r)=>s+r.amount,0);
+  const ship=mE.filter(r=>r.cat==='ship').reduce((s,r)=>s+r.amount,0);
+  const gross=totalInc-cost-ship;const net=totalInc-totalExp;const half=net/2;
+  const rate=totalInc>0?(net/totalInc*100):0;
+  const outstanding=Math.max(0,totalBorrowed-totalRepaid);
+  const totalAccruedInt=calcTotalAccruedInterest();
+  const expA=mE.filter(r=>r.store==='storeA').reduce((s,r)=>s+r.amount,0);
+  const expB=mE.filter(r=>r.store==='storeB').reduce((s,r)=>s+r.amount,0);
+  const expC=mE.filter(r=>r.store==='common').reduce((s,r)=>s+r.amount,0);
+
+  const catTotals={};const catMap2={cost:'货款/成本',ship:'运费/快递',brush:'刷单',platform:'平台扣点/佣金',promo:'推广费',fine:'店铺罚款',pack:'包装耗材',return:'退货损失',labor:'人工/客服',interest:'贷款利息',other:'其他'};
+  Object.keys(catMap2).forEach(k=>catTotals[k]=0);mE.forEach(r=>{catTotals[r.cat]=(catTotals[r.cat]||0)+r.amount;});
+
+  const td='border:1px solid #999;padding:6px 10px;';
+  const th='border:1px solid #999;padding:6px 10px;background:#444;color:#fff;font-weight:bold;';
+  const th2='border:1px solid #999;padding:6px 10px;background:#666;color:#fff;font-weight:bold;';
+  const tdR='border:1px solid #999;padding:6px 10px;text-align:right;font-family:Consolas,monospace;';
+  const tdB='border:1px solid #999;padding:6px 10px;font-weight:bold;';
+  const tdBR='border:1px solid #999;padding:6px 10px;font-weight:bold;text-align:right;font-family:Consolas,monospace;';
+  const sep='border:1px solid #999;padding:3px;background:#f0f0f0;';
+
+  let html=`<html><head><meta charset="UTF-8"><style>td{mso-number-format:"\\@";font-size:12px;font-family:Microsoft YaHei;}</style></head><body><table cellpadding="0" cellspacing="0">`;
+
+  // Title
+  html+=`<tr><td colspan="7" style="${th}font-size:16px;text-align:center;">淘宝记账报表 · ${month}</td></tr><tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // 1. Summary
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">一、本月总览</td></tr>`;
+  html+=`<tr><td style="${tdB}">内裤店收入</td><td style="${tdBR}">${fmt(incA)}</td><td style="${tdB}">衣服店收入</td><td style="${tdBR}">${fmt(incB)}</td><td style="${tdB}">总收入</td><td colspan="2" style="${tdBR}">${fmt(totalInc)}</td></tr>`;
+  html+=`<tr><td style="${tdB}">总支出</td><td style="${tdBR}">${fmt(totalExp)}</td><td style="${tdB}">其中贷款利息</td><td style="${tdBR}">${fmt(monthInterest)}</td><td style="${tdB}">利润率</td><td colspan="2" style="${tdBR}">${rate.toFixed(2)}%</td></tr>`;
+  html+=`<tr><td style="${tdB}background:#e8f5ee;">毛利润</td><td style="${tdBR}background:#e8f5ee;">${fmt(gross)}</td><td style="${tdB}background:${net>=0?'#e8f5ee':'#fcecea'};">纯利润</td><td style="${tdBR}background:${net>=0?'#e8f5ee':'#fcecea'};">${fmt(net)}</td><td style="${tdB}">每人应分</td><td colspan="2" style="${tdBR}">${fmt(half)}</td></tr>`;
+  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // 2. Store A
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">二、内裤店收入 · ${mA.length} 笔 · 合计 ${fmt(incA)}</td></tr>`;
+  html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">订单/说明</td><td style="${th}">类型</td><td style="${th}">金额</td><td colspan="2" style="${th}">备注</td></tr>`;
+  const tm={sale:'销售',refund:'退款',other:'其他'};
+  if(!mA.length)html+=`<tr><td colspan="7" style="${td}text-align:center;color:#999;">暂无</td></tr>`;
+  else mA.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${tm[r.type]}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td colspan="2" style="${td}">${r.remark||''}</td></tr>`;});
+  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // 3. Store B
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">三、衣服店收入 · ${mB.length} 笔 · 合计 ${fmt(incB)}</td></tr>`;
+  html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">订单/说明</td><td style="${th}">类型</td><td style="${th}">金额</td><td colspan="2" style="${th}">备注</td></tr>`;
+  if(!mB.length)html+=`<tr><td colspan="7" style="${td}text-align:center;color:#999;">暂无</td></tr>`;
+  else mB.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${tm[r.type]}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td colspan="2" style="${td}">${r.remark||''}</td></tr>`;});
+  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // 4. Expenses
+  const storeMap2={common:'公共',storeA:'内裤店',storeB:'衣服店'};
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">四、支出明细 · ${mE.length} 笔 · 合计 ${fmt(mE.reduce((s,r)=>s+r.amount,0))}</td></tr>`;
+  html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">用途</td><td style="${th}">类别</td><td style="${th}">归属</td><td style="${th}">金额</td><td style="${th}">备注</td></tr>`;
+  if(!mE.length)html+=`<tr><td colspan="7" style="${td}text-align:center;color:#999;">暂无</td></tr>`;
+  else mE.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${catMap2[r.cat]||r.cat}</td><td style="${td}">${storeMap2[r.store]||r.store}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td style="${td}">${r.remark||''}</td></tr>`;});
+  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // 5. Category breakdown
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">五、支出分类汇总</td></tr>`;
+  html+=`<tr><td style="${th}" colspan="2">类别</td><td style="${th}">金额</td><td style="${th}">占比</td><td colspan="3" style="${th}">说明</td></tr>`;
+  const catDesc={cost:'进货成本',ship:'快递物流费',brush:'刷单费用',platform:'平台扣点/技术服务费',promo:'直通车/钻展等推广',fine:'违规/延迟发货罚款',pack:'包装袋/胶带/填充物',return:'退货运费/商品损耗',labor:'客服/运营人工',interest:'手动记录的利息',other:'其他杂费'};
+  Object.entries(catMap2).forEach(([k,v])=>{const a=catTotals[k]||0;if(a>0){const p=mE.reduce((s,r)=>s+r.amount,0)>0?(a/mE.reduce((s,r)=>s+r.amount,0)*100).toFixed(1):'0.0';html+=`<tr><td style="${tdB}" colspan="2">${v}</td><td style="${tdR}">${fmt(a)}</td><td style="${tdR}">${p}%</td><td style="${td}" colspan="3">${catDesc[k]||''}</td></tr>`;}});
+  if(monthInterest>0)html+=`<tr><td style="${tdB}" colspan="2">贷款利息（自动）</td><td style="${tdR}">${fmt(monthInterest)}</td><td style="${tdR}">-</td><td style="${td}" colspan="3">按每笔借款实际天数×日利率0.0483%计算</td></tr>`;
+  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // 6. Store expense breakdown
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">六、支出归属分析</td></tr>`;
+  html+=`<tr><td style="${th}" colspan="2">归属</td><td style="${th}">金额</td><td style="${th}">占比</td><td colspan="3" style="${th}">说明</td></tr>`;
+  const totalExpAmt=mE.reduce((s,r)=>s+r.amount,0);
+  html+=`<tr><td style="${tdB}" colspan="2">内裤店</td><td style="${tdR}">${fmt(expA)}</td><td style="${tdR}">${totalExpAmt>0?(expA/totalExpAmt*100).toFixed(1):'0.0'}%</td><td colspan="3" style="${td}">直接归属内裤店</td></tr>`;
+  html+=`<tr><td style="${tdB}" colspan="2">衣服店</td><td style="${tdR}">${fmt(expB)}</td><td style="${tdR}">${totalExpAmt>0?(expB/totalExpAmt*100).toFixed(1):'0.0'}%</td><td colspan="3" style="${td}">直接归属衣服店</td></tr>`;
+  html+=`<tr><td style="${tdB}" colspan="2">公共均摊</td><td style="${tdR}">${fmt(expC)}</td><td style="${tdR}">${totalExpAmt>0?(expC/totalExpAmt*100).toFixed(1):'0.0'}%</td><td colspan="3" style="${td}">两家各承担 ${fmt(expC/2)}</td></tr>`;
+  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // 7. Per-store P&L
+  const storeAProfit=incA-expA-expC/2-monthInterest/2;
+  const storeBProfit=incB-expB-expC/2-monthInterest/2;
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">七、单店利润（公共支出各50%）</td></tr>`;
+  html+=`<tr><td style="${th}" colspan="2">项目</td><td style="${th}">内裤店</td><td style="${th}">衣服店</td><td style="${th}" colspan="3">合计</td></tr>`;
+  html+=`<tr><td style="${tdB}" colspan="2">收入</td><td style="${tdR}">${fmt(incA)}</td><td style="${tdR}">${fmt(incB)}</td><td style="${tdR}" colspan="3">${fmt(totalInc)}</td></tr>`;
+  html+=`<tr><td style="${tdB}" colspan="2">直接支出</td><td style="${tdR}">${fmt(expA)}</td><td style="${tdR}">${fmt(expB)}</td><td style="${tdR}" colspan="3">${fmt(expA+expB)}</td></tr>`;
+  html+=`<tr><td style="${tdB}" colspan="2">公共50%</td><td style="${tdR}">${fmt(expC/2)}</td><td style="${tdR}">${fmt(expC/2)}</td><td style="${tdR}" colspan="3">${fmt(expC)}</td></tr>`;
+  html+=`<tr><td style="${tdB}" colspan="2">利息50%</td><td style="${tdR}">${fmt(monthInterest/2)}</td><td style="${tdR}">${fmt(monthInterest/2)}</td><td style="${tdR}" colspan="3">${fmt(monthInterest)}</td></tr>`;
+  html+=`<tr><td style="${tdB}background:${storeAProfit>=0?'#e8f5ee':'#fcecea'};" colspan="2">单店利润</td><td style="${tdBR}background:${storeAProfit>=0?'#e8f5ee':'#fcecea'};">${fmt(storeAProfit)}</td><td style="${tdBR}background:${storeBProfit>=0?'#e8f5ee':'#fcecea'};">${fmt(storeBProfit)}</td><td style="${tdBR}" colspan="3">${fmt(storeAProfit+storeBProfit)}</td></tr>`;
+  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // 8. Loans detail
+  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">八、贷款明细</td></tr>`;
+  html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">类型</td><td style="${th}">金额</td><td style="${th}">本月计息天数</td><td style="${th}">本月利息</td><td style="${th}">备注</td></tr>`;
+  data.loans.forEach((r,i)=>{
+    const loanStart=r.date<eStart?eStart:r.date;
+    let days=0,int=0;if(loanStart<=endDate){days=daysBetween(loanStart,endDate);int=r.amount*DAILY_RATE*days;}
+    html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">借款</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td style="${tdR}">${days}</td><td style="${tdR}">${int.toFixed(2)}</td><td style="${td}">${r.remark||''}</td></tr>`;
+  });
+  data.repayments.forEach((r,i)=>{
+    html+=`<tr><td style="${td}">${data.loans.length+i+1}</td><td style="${td}">${r.date}</td><td style="${td}">还款</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td style="${td}">-</td><td style="${td}">-</td><td style="${td}">${r.remark||''}</td></tr>`;
+  });
+  html+=`<tr><td style="${tdB}" colspan="3">累计借款</td><td style="${tdBR}">${fmt(totalBorrowed)}</td><td style="${tdB}">累计还款</td><td style="${tdBR}" colspan="2">${fmt(totalRepaid)}</td></tr>`;
+  html+=`<tr><td style="${tdB}" colspan="3">未还本金</td><td style="${tdBR}">${fmt(outstanding)}</td><td style="${tdB}">本月利息</td><td style="${tdBR}" colspan="2">${fmt(monthInterest)}</td></tr>`;
+  html+=`<tr><td style="${tdB}" colspan="3">累计利息总额</td><td style="${tdBR}" colspan="4">${fmt(totalAccruedInt)}</td></tr>`;
+  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+
+  // Footer
+  html+=`<tr><td colspan="7" style="padding:10px;font-size:11px;color:#999;text-align:center;">淘宝记账报表 · 生成时间：${new Date().toLocaleString('zh-CN')} · 年利率17.64%单利 · 日利率0.0483%</td></tr>`;
+  html+=`</table></body></html>`;
+
+  const blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`淘宝记账报表_${month}.xls`;a.click();
+}
+
+init();
+</script>
+</body>
+</html>
