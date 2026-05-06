@@ -6,7 +6,7 @@
 <title>淘宝记账 · 双店铺利润表 · 云端同步版</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 <style>
   :root {
     --bg: #f7f5f0; --surface: #ffffff; --accent: #c4501a; --accent-light: #fdf0ec;
@@ -260,7 +260,12 @@ const SUPABASE_URL = 'https://vjildthiuxhoukakvtui.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg';
 
 // Initialize Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabase;
+if (typeof window.supabase !== 'undefined') {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else if (typeof supabase !== 'undefined') {
+  supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
 
 // Data storage (in-memory, synced with Supabase)
 let data = {incomeA:[],incomeB:[],expense:[],loans:[],repayments:[]};
