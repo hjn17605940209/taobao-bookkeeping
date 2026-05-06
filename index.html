@@ -6,7 +6,6 @@
 <title>淘宝记账 · 双店铺利润表 · 云端同步版</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 <style>
   :root {
     --bg: #f7f5f0; --surface: #ffffff; --accent: #c4501a; --accent-light: #fdf0ec;
@@ -254,18 +253,14 @@
   <div class="footer">淘宝记账 · 双店铺利润表 · 云端同步版</div>
 </div>
 
-<script>
+<script type="module">
 // Supabase Configuration
 const SUPABASE_URL = 'https://vjildthiuxhoukakvtui.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg';
 
-// Initialize Supabase
-let supabase;
-if (typeof window.supabase !== 'undefined') {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} else if (typeof supabase !== 'undefined') {
-  supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
+// Import Supabase
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Data storage (in-memory, synced with Supabase)
 let data = {incomeA:[],incomeB:[],expense:[],loans:[],repayments:[]};
@@ -326,18 +321,22 @@ function init(){
 }
 
 function setupRealtime() {
-  supabase.channel('public:income')
-    .on('postgres_changes', {event: '*', schema: 'public', table: 'income'}, () => loadFromSupabase())
-    .subscribe();
-  supabase.channel('public:expenses')
-    .on('postgres_changes', {event: '*', schema: 'public', table: 'expenses'}, () => loadFromSupabase())
-    .subscribe();
-  supabase.channel('public:loans')
-    .on('postgres_changes', {event: '*', schema: 'public', table: 'loans'}, () => loadFromSupabase())
-    .subscribe();
-  supabase.channel('public:repayments')
-    .on('postgres_changes', {event: '*', schema: 'public', table: 'repayments'}, () => loadFromSupabase())
-    .subscribe();
+  try {
+    supabase.channel('public:income')
+      .on('postgres_changes', {event: '*', schema: 'public', table: 'income'}, () => loadFromSupabase())
+      .subscribe();
+    supabase.channel('public:expenses')
+      .on('postgres_changes', {event: '*', schema: 'public', table: 'expenses'}, () => loadFromSupabase())
+      .subscribe();
+    supabase.channel('public:loans')
+      .on('postgres_changes', {event: '*', schema: 'public', table: 'loans'}, () => loadFromSupabase())
+      .subscribe();
+    supabase.channel('public:repayments')
+      .on('postgres_changes', {event: '*', schema: 'public', table: 'repayments'}, () => loadFromSupabase())
+      .subscribe();
+  } catch(e) {
+    console.log('Realtime not available');
+  }
 }
 
 // ===== LOAN MANAGEMENT =====
