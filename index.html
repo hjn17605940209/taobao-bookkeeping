@@ -100,7 +100,7 @@
   .notes h3{font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary)}
   .notes ul{list-style:none;display:flex;flex-direction:column;gap:4px}
   .notes li{font-size:11px;color:var(--text-muted);padding-left:14px;position:relative}
-  .notes li::before{content:'·';position:absolute;left:0;color:var(--accent);font-weight:700;font-size:16px;line-height:1}
+  .notes li::before{content:'\00b7';position:absolute;left:0;color:var(--accent);font-weight:700;font-size:16px;line-height:1}
   .footer{text-align:center;margin-top:32px;font-size:10px;color:var(--text-muted)}
 
   @media print{body{background:#fff}.header-right,.add-row,.btn-del,.btn-top,.notes{display:none!important}.container{padding:10px}.sec{break-inside:avoid;box-shadow:none;border:1px solid #ddd}.sum-card{box-shadow:none;border:1px solid #ddd}}
@@ -253,447 +253,478 @@
   <div class="footer">淘宝记账 · 双店铺利润表 · 云端同步版</div>
 </div>
 
-<script type="module">
-// Supabase Configuration
-const SUPABASE_URL = 'https://vjildthiuxhoukakvtui.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg';
+<!-- 通过 CDN 加载 Supabase JS SDK（非 module 方式） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ========== Supabase 初始化 ==========
+// 库加载后会把自己挂载到 window.supabase 上
+// 使用 var _sb 作为客户端变量名，避免和 window.supabase 冲突
+var _sb = window.supabase.createClient(
+  'https://vjildthiuxhoukakvtui.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg'
+);
 
-// Import Supabase
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ========== 数据存储 ==========
+var data = { incomeA: [], incomeB: [], expense: [], loans: [], repayments: [] };
+var DAILY_RATE = 17.64 / 365 / 100;
 
-// Data storage (in-memory, synced with Supabase)
-let data = {incomeA:[],incomeB:[],expense:[],loans:[],repayments:[]};
-const DAILY_RATE=17.64/365/100;
+// ========== 工具函数 ==========
+function fmt(n) { return '\u00a5' + Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function monthRange(m) { var parts = m.split('-').map(Number); var y = parts[0], mo = parts[1]; var s = y + '-' + String(mo).padStart(2, '0') + '-01'; var l = new Date(y, mo, 0).getDate(); var e = y + '-' + String(mo).padStart(2, '0') + '-' + String(l).padStart(2, '0'); return { s: s, e: e, days: l }; }
+function filterMonth(arr) { var m = document.getElementById('curMonth').value; return arr.filter(function(r) { return r.date && r.date.slice(0, 7) === m; }); }
+function daysBetween(a, b) { return Math.max(0, Math.ceil((new Date(b) - new Date(a)) / (1000 * 60 * 60 * 24))); }
 
-// Sync status
-let isSyncing = false;
-
+// ========== 同步状态 ==========
 function setSyncStatus(status, message) {
-  const el = document.getElementById('syncStatus');
+  var el = document.getElementById('syncStatus');
   el.className = 'sync-status ' + status;
   el.innerHTML = status === 'syncing' ? '<span class="sync-dot"></span>' + message : message;
 }
 
-// Load data from Supabase
-async function loadFromSupabase() {
+// ========== 从 Supabase 加载数据 ==========
+function loadFromSupabase() {
   setSyncStatus('syncing', '同步中...');
-  try {
-    // Load income A
-    let {data: incomeA} = await supabase.from('income').select('*').eq('store', 'A').order('date', {ascending: false});
-    // Load income B
-    let {data: incomeB} = await supabase.from('income').select('*').eq('store', 'B').order('date', {ascending: false});
-    // Load expenses
-    let {data: expenses} = await supabase.from('expenses').select('*').order('date', {ascending: false});
-    // Load loans
-    let {data: loans} = await supabase.from('loans').select('*').order('date', {ascending: false});
-    // Load repayments
-    let {data: repayments} = await supabase.from('repayments').select('*').order('date', {ascending: false});
-    
-    data.incomeA = incomeA || [];
-    data.incomeB = incomeB || [];
-    data.expense = expenses || [];
-    data.loans = loans || [];
-    data.repayments = repayments || [];
-    
+
+  Promise.all([
+    _sb.from('income').select('*').eq('store', 'A').order('date', { ascending: false }),
+    _sb.from('income').select('*').eq('store', 'B').order('date', { ascending: false }),
+    _sb.from('expenses').select('*').order('date', { ascending: false }),
+    _sb.from('loans').select('*').order('date', { ascending: false }),
+    _sb.from('repayments').select('*').order('date', { ascending: false })
+  ]).then(function(results) {
+    data.incomeA = results[0].data || [];
+    data.incomeB = results[1].data || [];
+    data.expense = results[2].data || [];
+    data.loans = results[3].data || [];
+    data.repayments = results[4].data || [];
     setSyncStatus('', '已同步');
     renderAll();
-  } catch(e) {
+  }).catch(function(e) {
     console.error('Sync error:', e);
     setSyncStatus('error', '同步失败');
-  }
+  });
 }
 
-function fmt(n){return'¥'+Number(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function today(){return new Date().toISOString().split('T')[0];}
-function monthRange(m){const[y,mo]=m.split('-').map(Number);const s=`${y}-${String(mo).padStart(2,'0')}-01`;const l=new Date(y,mo,0).getDate();const e=`${y}-${String(mo).padStart(2,'0')}-${String(l).padStart(2,'0')}`;return{s,e,days:l};}
-function filterMonth(arr){const m=document.getElementById('curMonth').value;return arr.filter(r=>r.date&&r.date.slice(0,7)===m);}
-function daysBetween(a,b){return Math.max(0,Math.ceil((new Date(b)-new Date(a))/(1000*60*60*24)));}
-
-function init(){
-  document.getElementById('curMonth').value=new Date().toISOString().slice(0,7);
-  const t=today();
-  ['dA','dB','dE','loanDate','repayDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
-  loadFromSupabase();
-  
-  // Set up realtime subscription
-  setupRealtime();
-}
-
+// ========== Realtime 订阅 ==========
 function setupRealtime() {
   try {
-    supabase.channel('public:income')
-      .on('postgres_changes', {event: '*', schema: 'public', table: 'income'}, () => loadFromSupabase())
+    _sb.channel('public:income')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'income' }, function() { loadFromSupabase(); })
       .subscribe();
-    supabase.channel('public:expenses')
-      .on('postgres_changes', {event: '*', schema: 'public', table: 'expenses'}, () => loadFromSupabase())
+    _sb.channel('public:expenses')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, function() { loadFromSupabase(); })
       .subscribe();
-    supabase.channel('public:loans')
-      .on('postgres_changes', {event: '*', schema: 'public', table: 'loans'}, () => loadFromSupabase())
+    _sb.channel('public:loans')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'loans' }, function() { loadFromSupabase(); })
       .subscribe();
-    supabase.channel('public:repayments')
-      .on('postgres_changes', {event: '*', schema: 'public', table: 'repayments'}, () => loadFromSupabase())
+    _sb.channel('public:repayments')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'repayments' }, function() { loadFromSupabase(); })
       .subscribe();
   } catch(e) {
     console.log('Realtime not available');
   }
 }
 
-// ===== LOAN MANAGEMENT =====
-async function addLoan(){
-  const date=document.getElementById('loanDate').value||today();
-  const amount=parseFloat(document.getElementById('loanAmount').value);
-  const remark=document.getElementById('loanRemark').value.trim()||null;
-  if(isNaN(amount)||amount<=0){alert('请填写借款金额');return;}
-  
+// ========== 贷款管理 ==========
+function addLoan() {
+  var date = document.getElementById('loanDate').value || today();
+  var amount = parseFloat(document.getElementById('loanAmount').value);
+  var remark = document.getElementById('loanRemark').value.trim() || null;
+  if (isNaN(amount) || amount <= 0) { alert('请填写借款金额'); return; }
+
   setSyncStatus('syncing', '保存中...');
-  const {error} = await supabase.from('loans').insert([{date,amount,remark}]);
-  if(error){alert('保存失败: '+error.message);setSyncStatus('error', '保存失败');return;}
-  
-  document.getElementById('loanAmount').value='';
-  document.getElementById('loanRemark').value='';
-  await loadFromSupabase();
+  _sb.from('loans').insert([{ date: date, amount: amount, remark: remark }]).then(function(res) {
+    if (res.error) { alert('保存失败: ' + res.error.message); setSyncStatus('error', '保存失败'); return; }
+    document.getElementById('loanAmount').value = '';
+    document.getElementById('loanRemark').value = '';
+    loadFromSupabase();
+  });
 }
 
-async function addRepay(){
-  const date=document.getElementById('repayDate').value||today();
-  const amount=parseFloat(document.getElementById('repayAmount').value);
-  const remark=document.getElementById('repayRemark').value.trim()||null;
-  if(isNaN(amount)||amount<=0){alert('请填写还款金额');return;}
-  
+function addRepay() {
+  var date = document.getElementById('repayDate').value || today();
+  var amount = parseFloat(document.getElementById('repayAmount').value);
+  var remark = document.getElementById('repayRemark').value.trim() || null;
+  if (isNaN(amount) || amount <= 0) { alert('请填写还款金额'); return; }
+
   setSyncStatus('syncing', '保存中...');
-  const {error} = await supabase.from('repayments').insert([{date,amount,remark}]);
-  if(error){alert('保存失败: '+error.message);setSyncStatus('error', '保存失败');return;}
-  
-  document.getElementById('repayAmount').value='';
-  document.getElementById('repayRemark').value='';
-  await loadFromSupabase();
+  _sb.from('repayments').insert([{ date: date, amount: amount, remark: remark }]).then(function(res) {
+    if (res.error) { alert('保存失败: ' + res.error.message); setSyncStatus('error', '保存失败'); return; }
+    document.getElementById('repayAmount').value = '';
+    document.getElementById('repayRemark').value = '';
+    loadFromSupabase();
+  });
 }
 
-async function delLoan(id){if(!confirm('确定删除？'))return;
+function delLoan(id) {
+  if (!confirm('确定删除？')) return;
   setSyncStatus('syncing', '删除中...');
-  await supabase.from('loans').delete().eq('id', id);
-  await loadFromSupabase();
+  _sb.from('loans').delete().eq('id', id).then(function() { loadFromSupabase(); });
 }
 
-async function delRepay(id){if(!confirm('确定删除？'))return;
+function delRepay(id) {
+  if (!confirm('确定删除？')) return;
   setSyncStatus('syncing', '删除中...');
-  await supabase.from('repayments').delete().eq('id', id);
-  await loadFromSupabase();
+  _sb.from('repayments').delete().eq('id', id).then(function() { loadFromSupabase(); });
 }
 
-function calcLoanInterest(){
-  const {s:eStart,e:eEnd,days:monthDays}=monthRange(document.getElementById('curMonth').value);
-  const todayStr=today();
-  const endDate=eEnd>todayStr?todayStr:eEnd;
+function calcLoanInterest() {
+  var range = monthRange(document.getElementById('curMonth').value);
+  var eStart = range.s, eEnd = range.e;
+  var todayStr = today();
+  var endDate = eEnd > todayStr ? todayStr : eEnd;
+  var totalBorrowed = 0, totalRepaid = 0, monthInterest = 0;
 
-  let totalBorrowed=0, totalRepaid=0, monthInterest=0;
-
-  data.loans.forEach(loan=>{
-    totalBorrowed+=loan.amount;
-    const loanStart=loan.date<eStart?eStart:loan.date;
-    if(loanStart>endDate) return;
-    const days=daysBetween(loanStart,endDate);
-    monthInterest+=loan.amount*DAILY_RATE*days;
+  data.loans.forEach(function(loan) {
+    totalBorrowed += loan.amount;
+    var loanStart = loan.date < eStart ? eStart : loan.date;
+    if (loanStart > endDate) return;
+    var days = daysBetween(loanStart, endDate);
+    monthInterest += loan.amount * DAILY_RATE * days;
   });
 
-  data.repayments.forEach(repay=>{
-    totalRepaid+=repay.amount;
-    const repayStart=repay.date<eStart?eStart:repay.date;
-    if(repayStart>endDate) return;
-    const days=daysBetween(repayStart,endDate);
-    monthInterest-=repay.amount*DAILY_RATE*days;
+  data.repayments.forEach(function(repay) {
+    totalRepaid += repay.amount;
+    var repayStart = repay.date < eStart ? eStart : repay.date;
+    if (repayStart > endDate) return;
+    var days = daysBetween(repayStart, endDate);
+    monthInterest -= repay.amount * DAILY_RATE * days;
   });
 
-  monthInterest=Math.max(0,monthInterest);
-  return {totalBorrowed,totalRepaid,monthInterest};
+  monthInterest = Math.max(0, monthInterest);
+  return { totalBorrowed: totalBorrowed, totalRepaid: totalRepaid, monthInterest: monthInterest };
 }
 
-function calcTotalAccruedInterest(){
-  let total=0;
-  const todayStr=today();
-  data.loans.forEach(loan=>{
-    if(loan.date>todayStr) return;
-    const days=daysBetween(loan.date,todayStr);
-    total+=loan.amount*DAILY_RATE*days;
+function calcTotalAccruedInterest() {
+  var total = 0;
+  var todayStr = today();
+  data.loans.forEach(function(loan) {
+    if (loan.date > todayStr) return;
+    var days = daysBetween(loan.date, todayStr);
+    total += loan.amount * DAILY_RATE * days;
   });
-  data.repayments.forEach(repay=>{
-    if(repay.date>todayStr) return;
-    const days=daysBetween(repay.date,todayStr);
-    total-=repay.amount*DAILY_RATE*days;
+  data.repayments.forEach(function(repay) {
+    if (repay.date > todayStr) return;
+    var days = daysBetween(repay.date, todayStr);
+    total -= repay.amount * DAILY_RATE * days;
   });
-  return Math.max(0,total);
+  return Math.max(0, total);
 }
 
-// ===== INCOME & EXPENSE =====
-async function addInc(store){
-  const date=document.getElementById('d'+store).value||today();
-  const desc=document.getElementById('desc'+store).value.trim();
-  const type=document.getElementById('type'+store).value;
-  const amount=parseFloat(document.getElementById('amt'+store).value);
-  const remark=document.getElementById('rmk'+store).value.trim()||null;
-  if(!desc||isNaN(amount)){alert('请填写说明和金额');return;}
-  
+// ========== 收入 & 支出 ==========
+function addInc(store) {
+  var date = document.getElementById('d' + store).value || today();
+  var desc = document.getElementById('desc' + store).value.trim();
+  var type = document.getElementById('type' + store).value;
+  var amount = parseFloat(document.getElementById('amt' + store).value);
+  var remark = document.getElementById('rmk' + store).value.trim() || null;
+  if (!desc || isNaN(amount)) { alert('请填写说明和金额'); return; }
+
   setSyncStatus('syncing', '保存中...');
-  const {error} = await supabase.from('income').insert([{date,store,desc,type,amount,remark}]);
-  if(error){alert('保存失败: '+error.message);setSyncStatus('error', '保存失败');return;}
-  
-  document.getElementById('desc'+store).value='';
-  document.getElementById('amt'+store).value='';
-  document.getElementById('rmk'+store).value='';
-  await loadFromSupabase();
+  _sb.from('income').insert([{ date: date, store: store, desc: desc, type: type, amount: amount, remark: remark }]).then(function(res) {
+    if (res.error) { alert('保存失败: ' + res.error.message); setSyncStatus('error', '保存失败'); return; }
+    document.getElementById('desc' + store).value = '';
+    document.getElementById('amt' + store).value = '';
+    document.getElementById('rmk' + store).value = '';
+    loadFromSupabase();
+  });
 }
 
-async function addExp(){
-  const date=document.getElementById('dE').value||today();
-  const desc=document.getElementById('descE').value.trim();
-  const cat=document.getElementById('catE').value;
-  const store=document.getElementById('storeE').value;
-  const amount=parseFloat(document.getElementById('amtE').value);
-  const remark=document.getElementById('rmkE').value.trim()||null;
-  if(!desc||isNaN(amount)||amount<=0){alert('请填写用途和金额');return;}
-  
+function addExp() {
+  var date = document.getElementById('dE').value || today();
+  var desc = document.getElementById('descE').value.trim();
+  var cat = document.getElementById('catE').value;
+  var store = document.getElementById('storeE').value;
+  var amount = parseFloat(document.getElementById('amtE').value);
+  var remark = document.getElementById('rmkE').value.trim() || null;
+  if (!desc || isNaN(amount) || amount <= 0) { alert('请填写用途和金额'); return; }
+
   setSyncStatus('syncing', '保存中...');
-  const {error} = await supabase.from('expenses').insert([{date,desc,cat,store,amount,remark}]);
-  if(error){alert('保存失败: '+error.message);setSyncStatus('error', '保存失败');return;}
-  
-  document.getElementById('descE').value='';
-  document.getElementById('amtE').value='';
-  document.getElementById('rmkE').value='';
-  await loadFromSupabase();
+  _sb.from('expenses').insert([{ date: date, desc: desc, cat: cat, store: store, amount: amount, remark: remark }]).then(function(res) {
+    if (res.error) { alert('保存失败: ' + res.error.message); setSyncStatus('error', '保存失败'); return; }
+    document.getElementById('descE').value = '';
+    document.getElementById('amtE').value = '';
+    document.getElementById('rmkE').value = '';
+    loadFromSupabase();
+  });
 }
 
-async function delItem(table,id){if(!confirm('确定删除？'))return;
+function delItem(table, id) {
+  if (!confirm('确定删除？')) return;
   setSyncStatus('syncing', '删除中...');
-  await supabase.from(table).delete().eq('id', id);
-  await loadFromSupabase();
+  _sb.from(table).delete().eq('id', id).then(function() { loadFromSupabase(); });
 }
 
-// ===== RENDER =====
-const catMap={cost:'货款/成本',ship:'运费/快递',brush:'刷单',platform:'平台扣点',promo:'推广费',fine:'店铺罚款',pack:'包装耗材',return:'退货损失',labor:'人工/客服',interest:'贷款利息',other:'其他'};
-const catCls={cost:'t-cost',ship:'t-ship',brush:'t-brush',platform:'t-platform',promo:'t-promo',fine:'t-fine',pack:'t-pack',return:'t-return',labor:'t-labor',interest:'t-interest',other:'t-other'};
-const storeMap={common:'公共',storeA:'内裤店',storeB:'衣服店'};
-const storeCls={common:'t-platform',storeA:'t-cost',storeB:'t-brush'};
+// ========== 渲染 ==========
+var catMap = { cost: '货款/成本', ship: '运费/快递', brush: '刷单', platform: '平台扣点', promo: '推广费', fine: '店铺罚款', pack: '包装耗材', return: '退货损失', labor: '人工/客服', interest: '贷款利息', other: '其他' };
+var catCls = { cost: 't-cost', ship: 't-ship', brush: 't-brush', platform: 't-platform', promo: 't-promo', fine: 't-fine', pack: 't-pack', return: 't-return', labor: 't-labor', interest: 't-interest', other: 't-other' };
+var storeMap = { common: '公共', storeA: '内裤店', storeB: '衣服店' };
+var storeCls = { common: 't-platform', storeA: 't-cost', storeB: 't-brush' };
 
-function renderAll(){
-  const mA=filterMonth(data.incomeA);
-  const mB=filterMonth(data.incomeB);
-  const mE=filterMonth(data.expense);
-  const {s:eStart,e:eEnd}=monthRange(document.getElementById('curMonth').value);
-  const todayStr=today();
-  const endDate=eEnd>todayStr?todayStr:eEnd;
+function renderAll() {
+  var mA = filterMonth(data.incomeA);
+  var mB = filterMonth(data.incomeB);
+  var mE = filterMonth(data.expense);
+  var range = monthRange(document.getElementById('curMonth').value);
+  var eStart = range.s, eEnd = range.e;
+  var todayStr = today();
+  var endDate = eEnd > todayStr ? todayStr : eEnd;
 
-  renderIncTable('bodyA',mA,'cntA');
-  renderIncTable('bodyB',mB,'cntB');
+  renderIncTable('bodyA', mA, 'cntA');
+  renderIncTable('bodyB', mB, 'cntB');
   renderExpTable(mE);
 
-  renderLoanTable(eStart,endDate);
+  renderLoanTable(eStart, endDate);
   renderRepayTable();
 
-  const incA=mA.reduce((s,r)=>s+r.amount,0);
-  const incB=mB.reduce((s,r)=>s+r.amount,0);
-  const totalInc=incA+incB;
-  const totalExp=mE.reduce((s,r)=>s+r.amount,0);
+  var incA = mA.reduce(function(s, r) { return s + r.amount; }, 0);
+  var incB = mB.reduce(function(s, r) { return s + r.amount; }, 0);
+  var totalInc = incA + incB;
+  var totalExp = mE.reduce(function(s, r) { return s + r.amount; }, 0);
 
-  const {totalBorrowed,totalRepaid,monthInterest}=calcLoanInterest();
-  const totalAccruedInt=calcTotalAccruedInterest();
-  const outstanding=Math.max(0,totalBorrowed-totalRepaid);
-  const totalWithLoan=totalExp+monthInterest;
-  const cost=mE.filter(r=>r.cat==='cost').reduce((s,r)=>s+r.amount,0);
-  const ship=mE.filter(r=>r.cat==='ship').reduce((s,r)=>s+r.amount,0);
-  const gross=totalInc-cost-ship;
-  const net=totalInc-totalWithLoan;
-  const half=net/2;
-  const rate=totalInc>0?(net/totalInc*100):0;
+  var loanInfo = calcLoanInterest();
+  var totalBorrowed = loanInfo.totalBorrowed;
+  var totalRepaid = loanInfo.totalRepaid;
+  var monthInterest = loanInfo.monthInterest;
+  var totalAccruedInt = calcTotalAccruedInterest();
+  var outstanding = Math.max(0, totalBorrowed - totalRepaid);
+  var totalWithLoan = totalExp + monthInterest;
+  var cost = mE.filter(function(r) { return r.cat === 'cost'; }).reduce(function(s, r) { return s + r.amount; }, 0);
+  var ship = mE.filter(function(r) { return r.cat === 'ship'; }).reduce(function(s, r) { return s + r.amount; }, 0);
+  var gross = totalInc - cost - ship;
+  var net = totalInc - totalWithLoan;
+  var half = net / 2;
+  var rate = totalInc > 0 ? (net / totalInc * 100) : 0;
 
-  document.getElementById('sIncA').textContent=fmt(incA);
-  document.getElementById('sIncB').textContent=fmt(incB);
-  document.getElementById('sExp').textContent=fmt(totalExp);
-  document.getElementById('sInt').textContent=fmt(monthInterest);
-  document.getElementById('sGross').textContent=fmt(gross);
-  document.getElementById('sNet').textContent=fmt(net);
-  document.getElementById('sHalf').textContent=fmt(half);
-  document.getElementById('sRate').textContent=rate.toFixed(1)+'%';
-  setCardClass('sGross',gross);setCardClass('sNet',net);setCardClass('sHalf',half);
+  document.getElementById('sIncA').textContent = fmt(incA);
+  document.getElementById('sIncB').textContent = fmt(incB);
+  document.getElementById('sExp').textContent = fmt(totalExp);
+  document.getElementById('sInt').textContent = fmt(monthInterest);
+  document.getElementById('sGross').textContent = fmt(gross);
+  document.getElementById('sNet').textContent = fmt(net);
+  document.getElementById('sHalf').textContent = fmt(half);
+  document.getElementById('sRate').textContent = rate.toFixed(1) + '%';
+  setCardClass('sGross', gross); setCardClass('sNet', net); setCardClass('sHalf', half);
 
-  document.getElementById('lTotalBorrow').textContent=fmt(totalBorrowed);
-  document.getElementById('lTotalRepay').textContent=fmt(totalRepaid);
-  document.getElementById('lOutstanding').textContent=fmt(outstanding);
-  document.getElementById('lMonthInt').textContent=fmt(monthInterest);
-  document.getElementById('lTotalInt').textContent=fmt(totalAccruedInt);
+  document.getElementById('lTotalBorrow').textContent = fmt(totalBorrowed);
+  document.getElementById('lTotalRepay').textContent = fmt(totalRepaid);
+  document.getElementById('lOutstanding').textContent = fmt(outstanding);
+  document.getElementById('lMonthInt').textContent = fmt(monthInterest);
+  document.getElementById('lTotalInt').textContent = fmt(totalAccruedInt);
 
-  renderPL(incA,incB,mE,monthInterest,totalInc,totalWithLoan,gross,net,half,rate);
+  renderPL(incA, incB, mE, monthInterest, totalInc, totalWithLoan, gross, net, half, rate);
 }
 
-function setCardClass(id,val){const el=document.getElementById(id);el.closest('.sum-card').className='sum-card '+(val>=0?'pos':'neg');}
+function setCardClass(id, val) {
+  var el = document.getElementById(id);
+  el.closest('.sum-card').className = 'sum-card ' + (val >= 0 ? 'pos' : 'neg');
+}
 
-function renderLoanTable(eStart,endDate){
-  const body=document.getElementById('loanBody');
-  if(!data.loans.length){body.innerHTML='<tr><td colspan="6" class="empty">暂无借款记录</td></tr>';return;}
-  body.innerHTML=data.loans.map(r=>{
-    const loanStart=r.date<eStart?eStart:r.date;
-    let days=0,interest=0;
-    if(loanStart<=endDate){days=daysBetween(loanStart,endDate);interest=r.amount*DAILY_RATE*days;}
-    return `<tr>
-      <td class="mono">${r.date}</td>
-      <td class="mono amt-neg">${fmt(r.amount)}</td>
-      <td class="mono">${days} 天</td>
-      <td class="mono">${fmt(interest)}</td>
-      <td class="remark">${r.remark||'-'}</td>
-      <td><button class="btn-del" onclick="delLoan('${r.id}')">×</button></td>
-    </tr>`;
+function renderLoanTable(eStart, endDate) {
+  var body = document.getElementById('loanBody');
+  if (!data.loans.length) { body.innerHTML = '<tr><td colspan="6" class="empty">暂无借款记录</td></tr>'; return; }
+  body.innerHTML = data.loans.map(function(r) {
+    var loanStart = r.date < eStart ? eStart : r.date;
+    var days = 0, interest = 0;
+    if (loanStart <= endDate) { days = daysBetween(loanStart, endDate); interest = r.amount * DAILY_RATE * days; }
+    return '<tr>' +
+      '<td class="mono">' + r.date + '</td>' +
+      '<td class="mono amt-neg">' + fmt(r.amount) + '</td>' +
+      '<td class="mono">' + days + ' 天</td>' +
+      '<td class="mono">' + fmt(interest) + '</td>' +
+      '<td class="remark">' + (r.remark || '-') + '</td>' +
+      '<td><button class="btn-del" onclick="delLoan(\'' + r.id + '\')">\u00d7</button></td>' +
+      '</tr>';
   }).join('');
 }
 
-function renderRepayTable(){
-  const body=document.getElementById('repayBody');
-  if(!data.repayments.length){body.innerHTML='<tr><td colspan="4" class="empty">暂无还款记录</td></tr>';return;}
-  body.innerHTML=data.repayments.map(r=>{
-    return `<tr>
-      <td class="mono">${r.date}</td>
-      <td class="mono amt-pos">${fmt(r.amount)}</td>
-      <td class="remark">${r.remark||'-'}</td>
-      <td><button class="btn-del" onclick="delRepay('${r.id}')">×</button></td>
-    </tr>`;
+function renderRepayTable() {
+  var body = document.getElementById('repayBody');
+  if (!data.repayments.length) { body.innerHTML = '<tr><td colspan="4" class="empty">暂无还款记录</td></tr>'; return; }
+  body.innerHTML = data.repayments.map(function(r) {
+    return '<tr>' +
+      '<td class="mono">' + r.date + '</td>' +
+      '<td class="mono amt-pos">' + fmt(r.amount) + '</td>' +
+      '<td class="remark">' + (r.remark || '-') + '</td>' +
+      '<td><button class="btn-del" onclick="delRepay(\'' + r.id + '\')">\u00d7</button></td>' +
+      '</tr>';
   }).join('');
 }
 
-function renderIncTable(bodyId,items,cntId){
-  const body=document.getElementById(bodyId);
-  document.getElementById(cntId).textContent=items.length+' 笔';
-  if(!items.length){body.innerHTML='<tr><td colspan="6" class="empty">暂无记录</td></tr>';return;}
-  const tm={sale:'销售',refund:'退款',other:'其他'};
-  const table = bodyId==='bodyA'?'income':'income';
-  body.innerHTML=items.map(r=>{
-    const cls=r.amount>=0?'amt-pos':'amt-neg';
-    return `<tr><td class="mono">${r.date}</td><td>${r.desc}</td><td><span class="tag t-cost">${tm[r.type]||r.type}</span></td><td class="mono ${cls}">${fmt(r.amount)}</td><td class="remark">${r.remark||'-'}</td><td><button class="btn-del" onclick="delItem('${table}','${r.id}')">×</button></td></tr>`;
+function renderIncTable(bodyId, items, cntId) {
+  var body = document.getElementById(bodyId);
+  document.getElementById(cntId).textContent = items.length + ' 笔';
+  if (!items.length) { body.innerHTML = '<tr><td colspan="6" class="empty">暂无记录</td></tr>'; return; }
+  var tm = { sale: '销售', refund: '退款', other: '其他' };
+  body.innerHTML = items.map(function(r) {
+    var cls = r.amount >= 0 ? 'amt-pos' : 'amt-neg';
+    return '<tr>' +
+      '<td class="mono">' + r.date + '</td>' +
+      '<td>' + r.desc + '</td>' +
+      '<td><span class="tag t-cost">' + (tm[r.type] || r.type) + '</span></td>' +
+      '<td class="mono ' + cls + '">' + fmt(r.amount) + '</td>' +
+      '<td class="remark">' + (r.remark || '-') + '</td>' +
+      '<td><button class="btn-del" onclick="delItem(\'income\',\'' + r.id + '\')">\u00d7</button></td>' +
+      '</tr>';
   }).join('');
 }
 
-function renderExpTable(items){
-  const body=document.getElementById('bodyE');
-  document.getElementById('cntE').textContent=items.length+' 笔';
-  if(!items.length){body.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';return;}
-  body.innerHTML=items.map(r=>{
-    return `<tr><td class="mono">${r.date}</td><td>${r.desc}</td><td><span class="tag ${catCls[r.cat]||'t-other'}">${catMap[r.cat]||r.cat}</span></td><td><span class="tag ${storeCls[r.store]||'t-platform'}">${storeMap[r.store]||r.store}</span></td><td class="mono amt-neg">${fmt(r.amount)}</td><td class="remark">${r.remark||'-'}</td><td><button class="btn-del" onclick="delItem('expenses','${r.id}')">×</button></td></tr>`;
+function renderExpTable(items) {
+  var body = document.getElementById('bodyE');
+  document.getElementById('cntE').textContent = items.length + ' 笔';
+  if (!items.length) { body.innerHTML = '<tr><td colspan="7" class="empty">暂无记录</td></tr>'; return; }
+  body.innerHTML = items.map(function(r) {
+    return '<tr>' +
+      '<td class="mono">' + r.date + '</td>' +
+      '<td>' + r.desc + '</td>' +
+      '<td><span class="tag ' + (catCls[r.cat] || 't-other') + '">' + (catMap[r.cat] || r.cat) + '</span></td>' +
+      '<td><span class="tag ' + (storeCls[r.store] || 't-platform') + '">' + (storeMap[r.store] || r.store) + '</span></td>' +
+      '<td class="mono amt-neg">' + fmt(r.amount) + '</td>' +
+      '<td class="remark">' + (r.remark || '-') + '</td>' +
+      '<td><button class="btn-del" onclick="delItem(\'expenses\',\'' + r.id + '\')">\u00d7</button></td>' +
+      '</tr>';
   }).join('');
 }
 
-function renderPL(incA,incB,expenses,loanInt,totalInc,totalExp,gross,net,half,rate){
-  const catTotals={};Object.keys(catMap).forEach(k=>catTotals[k]=0);expenses.forEach(r=>{catTotals[r.cat]=(catTotals[r.cat]||0)+r.amount;});
-  let h=`<tr><td><b>收入</b></td><td></td></tr>
-    <tr class="pl-sub"><td>  内裤店收入</td><td>${fmt(incA)}</td></tr>
-    <tr class="pl-sub"><td>  衣服店收入</td><td>${fmt(incB)}</td></tr>
-    <tr style="border-top:1px solid var(--border)"><td><b>收入合计</b></td><td><b>${fmt(totalInc)}</b></td></tr>
-    <tr><td style="height:10px"></td><td></td></tr>
-    <tr><td><b>支出</b></td><td></td></tr>`;
-  Object.entries(catMap).forEach(([k,v])=>{if(catTotals[k]>0)h+=`<tr class="pl-sub"><td>  ${v}</td><td>${fmt(catTotals[k])}</td></tr>`;});
-  if(loanInt>0)h+=`<tr class="pl-sub"><td>  贷款利息（自动计算）</td><td>${fmt(loanInt)}</td></tr>`;
-  h+=`<tr style="border-top:1px solid var(--border)"><td><b>支出合计</b></td><td><b>${fmt(totalExp)}</b></td></tr>
-    <tr><td style="height:10px"></td><td></td></tr>
-    <tr class="pl-sep"><td>毛利润</td><td>${fmt(gross)}</td></tr>
-    <tr class="pl-sep"><td>纯利润</td><td>${fmt(net)}</td></tr>
-    <tr><td>每人应分 (50/50)</td><td style="font-weight:600">${fmt(half)}</td></tr>
-    <tr><td style="color:var(--text-muted);font-size:12px">利润率</td><td style="color:var(--text-muted);font-size:12px">${rate.toFixed(1)}%</td></tr>`;
-  document.getElementById('plTable').innerHTML=h;
-}
+function renderPL(incA, incB, expenses, loanInt, totalInc, totalExp, gross, net, half, rate) {
+  var catTotals = {};
+  Object.keys(catMap).forEach(function(k) { catTotals[k] = 0; });
+  expenses.forEach(function(r) { catTotals[r.cat] = (catTotals[r.cat] || 0) + r.amount; });
 
-// ===== EXPORT =====
-function exportCSV(){
-  const mA=filterMonth(data.incomeA);const mB=filterMonth(data.incomeB);const mE=filterMonth(data.expense);
-  const month=document.getElementById('curMonth').value;
-  const {totalBorrowed,totalRepaid,monthInterest}=calcLoanInterest();
-  const {s:eStart,e:eEnd}=monthRange(month);
-  const todayStr=today();const endDate=eEnd>todayStr?todayStr:eEnd;
+  var h = '<tr><td><b>收入</b></td><td></td></tr>' +
+    '<tr class="pl-sub"><td>  内裤店收入</td><td>' + fmt(incA) + '</td></tr>' +
+    '<tr class="pl-sub"><td>  衣服店收入</td><td>' + fmt(incB) + '</td></tr>' +
+    '<tr style="border-top:1px solid var(--border)"><td><b>收入合计</b></td><td><b>' + fmt(totalInc) + '</b></td></tr>' +
+    '<tr><td style="height:10px"></td><td></td></tr>' +
+    '<tr><td><b>支出</b></td><td></td></tr>';
 
-  const incA=mA.reduce((s,r)=>s+r.amount,0);
-  const incB=mB.reduce((s,r)=>s+r.amount,0);
-  const totalInc=incA+incB;
-  const totalExp=mE.reduce((s,r)=>s+r.amount,0)+monthInterest;
-  const cost=mE.filter(r=>r.cat==='cost').reduce((s,r)=>s+r.amount,0);
-  const ship=mE.filter(r=>r.cat==='ship').reduce((s,r)=>s+r.amount,0);
-  const gross=totalInc-cost-ship;const net=totalInc-totalExp;const half=net/2;
-  const rate=totalInc>0?(net/totalInc*100):0;
-  const outstanding=Math.max(0,totalBorrowed-totalRepaid);
-  const totalAccruedInt=calcTotalAccruedInterest();
-  const expA=mE.filter(r=>r.store==='storeA').reduce((s,r)=>s+r.amount,0);
-  const expB=mE.filter(r=>r.store==='storeB').reduce((s,r)=>s+r.amount,0);
-  const expC=mE.filter(r=>r.store==='common').reduce((s,r)=>s+r.amount,0);
-
-  const catTotals={};const catMap2={cost:'货款/成本',ship:'运费/快递',brush:'刷单',platform:'平台扣点/佣金',promo:'推广费',fine:'店铺罚款',pack:'包装耗材',return:'退货损失',labor:'人工/客服',interest:'贷款利息',other:'其他'};
-  Object.keys(catMap2).forEach(k=>catTotals[k]=0);mE.forEach(r=>{catTotals[r.cat]=(catTotals[r.cat]||0)+r.amount;});
-
-  const td='border:1px solid #999;padding:6px 10px;';
-  const th='border:1px solid #999;padding:6px 10px;background:#444;color:#fff;font-weight:bold;';
-  const th2='border:1px solid #999;padding:6px 10px;background:#666;color:#fff;font-weight:bold;';
-  const tdR='border:1px solid #999;padding:6px 10px;text-align:right;font-family:Consolas,monospace;';
-  const tdB='border:1px solid #999;padding:6px 10px;font-weight:bold;';
-  const tdBR='border:1px solid #999;padding:6px 10px;font-weight:bold;text-align:right;font-family:Consolas,monospace;';
-  const sep='border:1px solid #999;padding:3px;background:#f0f0f0;';
-
-  let html=`<html><head><meta charset="UTF-8"><style>td{mso-number-format:"\\@";font-size:12px;font-family:Microsoft YaHei;}</style></head><body><table cellpadding="0" cellspacing="0">`;
-
-  html+=`<tr><td colspan="7" style="${th}font-size:16px;text-align:center;">淘宝记账报表 · ${month} · 云端同步版</td></tr><tr><td colspan="7" style="${sep}"></td></tr>`;
-
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">一、本月总览</td></tr>`;
-  html+=`<tr><td style="${tdB}">内裤店收入</td><td style="${tdBR}">${fmt(incA)}</td><td style="${tdB}">衣服店收入</td><td style="${tdBR}">${fmt(incB)}</td><td style="${tdB}">总收入</td><td colspan="2" style="${tdBR}">${fmt(totalInc)}</td></tr>`;
-  html+=`<tr><td style="${tdB}">总支出</td><td style="${tdBR}">${fmt(totalExp)}</td><td style="${tdB}">其中贷款利息</td><td style="${tdBR}">${fmt(monthInterest)}</td><td style="${tdB}">利润率</td><td colspan="2" style="${tdBR}">${rate.toFixed(2)}%</td></tr>`;
-  html+=`<tr><td style="${tdB}background:#e8f5ee;">毛利润</td><td style="${tdBR}background:#e8f5ee;">${fmt(gross)}</td><td style="${tdB}background:${net>=0?'#e8f5ee':'#fcecea'};">纯利润</td><td style="${tdBR}background:${net>=0?'#e8f5ee':'#fcecea'};">${fmt(net)}</td><td style="${tdB}">每人应分</td><td colspan="2" style="${tdBR}">${fmt(half)}</td></tr>`;
-  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
-
-  const tm={sale:'销售',refund:'退款',other:'其他'};
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">二、内裤店收入 · ${mA.length} 笔 · 合计 ${fmt(incA)}</td></tr>`;
-  html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">订单/说明</td><td style="${th}">类型</td><td style="${th}">金额</td><td colspan="2" style="${th}">备注</td></tr>`;
-  if(!mA.length)html+=`<tr><td colspan="7" style="${td}text-align:center;color:#999;">暂无</td></tr>`;
-  else mA.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${tm[r.type]}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td colspan="2" style="${td}">${r.remark||''}</td></tr>`;});
-  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
-
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">三、衣服店收入 · ${mB.length} 笔 · 合计 ${fmt(incB)}</td></tr>`;
-  html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">订单/说明</td><td style="${th}">类型</td><td style="${th}">金额</td><td colspan="2" style="${th}">备注</td></tr>`;
-  if(!mB.length)html+=`<tr><td colspan="7" style="${td}text-align:center;color:#999;">暂无</td></tr>`;
-  else mB.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${tm[r.type]}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td colspan="2" style="${td}">${r.remark||''}</td></tr>`;});
-  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
-
-  const storeMap2={common:'公共',storeA:'内裤店',storeB:'衣服店'};
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">四、支出明细 · ${mE.length} 笔 · 合计 ${fmt(mE.reduce((s,r)=>s+r.amount,0))}</td></tr>`;
-  html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">用途</td><td style="${th}">类别</td><td style="${th}">归属</td><td style="${th}">金额</td><td style="${th}">备注</td></tr>`;
-  if(!mE.length)html+=`<tr><td colspan="7" style="${td}text-align:center;color:#999;">暂无</td></tr>`;
-  else mE.forEach((r,i)=>{html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">${r.desc}</td><td style="${td}">${catMap2[r.cat]||r.cat}</td><td style="${td}">${storeMap2[r.store]||r.store}</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td style="${td}">${r.remark||''}</td></tr>`;});
-  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
-
-  html+=`<tr><td colspan="7" style="${th2}font-size:13px;">五、贷款明细</td></tr>`;
-  html+=`<tr><td style="${th}">序号</td><td style="${th}">日期</td><td style="${th}">类型</td><td style="${th}">金额</td><td style="${th}">本月计息天数</td><td style="${th}">本月利息</td><td style="${th}">备注</td></tr>`;
-  data.loans.forEach((r,i)=>{
-    const loanStart=r.date<eStart?eStart:r.date;
-    let days=0,int=0;if(loanStart<=endDate){days=daysBetween(loanStart,endDate);int=r.amount*DAILY_RATE*days;}
-    html+=`<tr><td style="${td}">${i+1}</td><td style="${td}">${r.date}</td><td style="${td}">借款</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td style="${tdR}">${days}</td><td style="${tdR}">${int.toFixed(2)}</td><td style="${td}">${r.remark||''}</td></tr>`;
+  Object.entries(catMap).forEach(function(entry) {
+    var k = entry[0], v = entry[1];
+    if (catTotals[k] > 0) h += '<tr class="pl-sub"><td>  ' + v + '</td><td>' + fmt(catTotals[k]) + '</td></tr>';
   });
-  data.repayments.forEach((r,i)=>{
-    html+=`<tr><td style="${td}">${data.loans.length+i+1}</td><td style="${td}">${r.date}</td><td style="${td}">还款</td><td style="${tdR}">${Number(r.amount).toFixed(2)}</td><td style="${td}">-</td><td style="${td}">-</td><td style="${td}">${r.remark||''}</td></tr>`;
-  });
-  html+=`<tr><td style="${tdB}" colspan="3">累计借款</td><td style="${tdBR}">${fmt(totalBorrowed)}</td><td style="${tdB}">累计还款</td><td style="${tdBR}" colspan="2">${fmt(totalRepaid)}</td></tr>`;
-  html+=`<tr><td style="${tdB}" colspan="3">未还本金</td><td style="${tdBR}">${fmt(outstanding)}</td><td style="${tdB}">本月利息</td><td style="${tdBR}" colspan="2">${fmt(monthInterest)}</td></tr>`;
-  html+=`<tr><td colspan="7" style="${sep}"></td></tr>`;
+  if (loanInt > 0) h += '<tr class="pl-sub"><td>  贷款利息（自动计算）</td><td>' + fmt(loanInt) + '</td></tr>';
 
-  html+=`<tr><td colspan="7" style="padding:10px;font-size:11px;color:#999;text-align:center;">淘宝记账报表 · 云端同步版 · 生成时间：${new Date().toLocaleString('zh-CN')} · 年利率17.64%单利</td></tr>`;
-  html+=`</table></body></html>`;
+  h += '<tr style="border-top:1px solid var(--border)"><td><b>支出合计</b></td><td><b>' + fmt(totalExp) + '</b></td></tr>' +
+    '<tr><td style="height:10px"></td><td></td></tr>' +
+    '<tr class="pl-sep"><td>毛利润</td><td>' + fmt(gross) + '</td></tr>' +
+    '<tr class="pl-sep"><td>纯利润</td><td>' + fmt(net) + '</td></tr>' +
+    '<tr><td>每人应分 (50/50)</td><td style="font-weight:600">' + fmt(half) + '</td></tr>' +
+    '<tr><td style="color:var(--text-muted);font-size:12px">利润率</td><td style="color:var(--text-muted);font-size:12px">' + rate.toFixed(1) + '%</td></tr>';
 
-  const blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8;'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`淘宝记账报表_${month}.xls`;a.click();
+  document.getElementById('plTable').innerHTML = h;
 }
 
+// ========== 导出 Excel ==========
+function exportCSV() {
+  var mA = filterMonth(data.incomeA);
+  var mB = filterMonth(data.incomeB);
+  var mE = filterMonth(data.expense);
+  var month = document.getElementById('curMonth').value;
+  var loanInfo = calcLoanInterest();
+  var totalBorrowed = loanInfo.totalBorrowed;
+  var totalRepaid = loanInfo.totalRepaid;
+  var monthInterest = loanInfo.monthInterest;
+  var range = monthRange(month);
+  var eStart = range.s, eEnd = range.e;
+  var todayStr = today();
+  var endDate = eEnd > todayStr ? todayStr : eEnd;
+
+  var incA = mA.reduce(function(s, r) { return s + r.amount; }, 0);
+  var incB = mB.reduce(function(s, r) { return s + r.amount; }, 0);
+  var totalInc = incA + incB;
+  var totalExp = mE.reduce(function(s, r) { return s + r.amount; }, 0) + monthInterest;
+  var cost = mE.filter(function(r) { return r.cat === 'cost'; }).reduce(function(s, r) { return s + r.amount; }, 0);
+  var ship = mE.filter(function(r) { return r.cat === 'ship'; }).reduce(function(s, r) { return s + r.amount; }, 0);
+  var gross = totalInc - cost - ship;
+  var net = totalInc - totalExp;
+  var half = net / 2;
+  var rate = totalInc > 0 ? (net / totalInc * 100) : 0;
+  var outstanding = Math.max(0, totalBorrowed - totalRepaid);
+  var totalAccruedInt = calcTotalAccruedInterest();
+
+  var catTotals = {};
+  var catMap2 = { cost: '货款/成本', ship: '运费/快递', brush: '刷单', platform: '平台扣点/佣金', promo: '推广费', fine: '店铺罚款', pack: '包装耗材', return: '退货损失', labor: '人工/客服', interest: '贷款利息', other: '其他' };
+  Object.keys(catMap2).forEach(function(k) { catTotals[k] = 0; });
+  mE.forEach(function(r) { catTotals[r.cat] = (catTotals[r.cat] || 0) + r.amount; });
+
+  var td = 'border:1px solid #999;padding:6px 10px;';
+  var th = 'border:1px solid #999;padding:6px 10px;background:#444;color:#fff;font-weight:bold;';
+  var th2 = 'border:1px solid #999;padding:6px 10px;background:#666;color:#fff;font-weight:bold;';
+  var tdR = 'border:1px solid #999;padding:6px 10px;text-align:right;font-family:Consolas,monospace;';
+  var tdB = 'border:1px solid #999;padding:6px 10px;font-weight:bold;';
+  var tdBR = 'border:1px solid #999;padding:6px 10px;font-weight:bold;text-align:right;font-family:Consolas,monospace;';
+  var sep = 'border:1px solid #999;padding:3px;background:#f0f0f0;';
+
+  var html = '<html><head><meta charset="UTF-8"><style>td{mso-number-format:"\\@";font-size:12px;font-family:Microsoft YaHei;}</style></head><body><table cellpadding="0" cellspacing="0">';
+
+  html += '<tr><td colspan="7" style="' + th + 'font-size:16px;text-align:center;">淘宝记账报表 \u00b7 ' + month + ' \u00b7 云端同步版</td></tr><tr><td colspan="7" style="' + sep + '"></td></tr>';
+
+  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">一、本月总览</td></tr>';
+  html += '<tr><td style="' + tdB + '">内裤店收入</td><td style="' + tdBR + '">' + fmt(incA) + '</td><td style="' + tdB + '">衣服店收入</td><td style="' + tdBR + '">' + fmt(incB) + '</td><td style="' + tdB + '">总收入</td><td colspan="2" style="' + tdBR + '">' + fmt(totalInc) + '</td></tr>';
+  html += '<tr><td style="' + tdB + '">总支出</td><td style="' + tdBR + '">' + fmt(totalExp) + '</td><td style="' + tdB + '">其中贷款利息</td><td style="' + tdBR + '">' + fmt(monthInterest) + '</td><td style="' + tdB + '">利润率</td><td colspan="2" style="' + tdBR + '">' + rate.toFixed(2) + '%</td></tr>';
+  html += '<tr><td style="' + tdB + 'background:#e8f5ee;">毛利润</td><td style="' + tdBR + 'background:#e8f5ee;">' + fmt(gross) + '</td><td style="' + tdB + 'background:' + (net >= 0 ? '#e8f5ee' : '#fcecea') + ';">纯利润</td><td style="' + tdBR + 'background:' + (net >= 0 ? '#e8f5ee' : '#fcecea') + ';">' + fmt(net) + '</td><td style="' + tdB + '">每人应分</td><td colspan="2" style="' + tdBR + '">' + fmt(half) + '</td></tr>';
+  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+
+  var tm = { sale: '销售', refund: '退款', other: '其他' };
+  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">二、内裤店收入 \u00b7 ' + mA.length + ' 笔 \u00b7 合计 ' + fmt(incA) + '</td></tr>';
+  html += '<tr><td style="' + th + '">序号</td><td style="' + th + '">日期</td><td style="' + th + '">订单/说明</td><td style="' + th + '">类型</td><td style="' + th + '">金额</td><td colspan="2" style="' + th + '">备注</td></tr>';
+  if (!mA.length) html += '<tr><td colspan="7" style="' + td + 'text-align:center;color:#999;">暂无</td></tr>';
+  else mA.forEach(function(r, i) { html += '<tr><td style="' + td + '">' + (i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">' + r.desc + '</td><td style="' + td + '">' + tm[r.type] + '</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td colspan="2" style="' + td + '">' + (r.remark || '') + '</td></tr>'; });
+  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+
+  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">三、衣服店收入 \u00b7 ' + mB.length + ' 笔 \u00b7 合计 ' + fmt(incB) + '</td></tr>';
+  html += '<tr><td style="' + th + '">序号</td><td style="' + th + '">日期</td><td style="' + th + '">订单/说明</td><td style="' + th + '">类型</td><td style="' + th + '">金额</td><td colspan="2" style="' + th + '">备注</td></tr>';
+  if (!mB.length) html += '<tr><td colspan="7" style="' + td + 'text-align:center;color:#999;">暂无</td></tr>';
+  else mB.forEach(function(r, i) { html += '<tr><td style="' + td + '">' + (i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">' + r.desc + '</td><td style="' + td + '">' + tm[r.type] + '</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td colspan="2" style="' + td + '">' + (r.remark || '') + '</td></tr>'; });
+  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+
+  var storeMap2 = { common: '公共', storeA: '内裤店', storeB: '衣服店' };
+  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">四、支出明细 \u00b7 ' + mE.length + ' 笔 \u00b7 合计 ' + fmt(mE.reduce(function(s, r) { return s + r.amount; }, 0)) + '</td></tr>';
+  html += '<tr><td style="' + th + '">序号</td><td style="' + th + '">日期</td><td style="' + th + '">用途</td><td style="' + th + '">类别</td><td style="' + th + '">归属</td><td style="' + th + '">金额</td><td style="' + th + '">备注</td></tr>';
+  if (!mE.length) html += '<tr><td colspan="7" style="' + td + 'text-align:center;color:#999;">暂无</td></tr>';
+  else mE.forEach(function(r, i) { html += '<tr><td style="' + td + '">' + (i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">' + r.desc + '</td><td style="' + td + '">' + (catMap2[r.cat] || r.cat) + '</td><td style="' + td + '">' + (storeMap2[r.store] || r.store) + '</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td style="' + td + '">' + (r.remark || '') + '</td></tr>'; });
+  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+
+  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">五、贷款明细</td></tr>';
+  html += '<tr><td style="' + th + '">序号</td><td style="' + th + '">日期</td><td style="' + th + '">类型</td><td style="' + th + '">金额</td><td style="' + th + '">本月计息天数</td><td style="' + th + '">本月利息</td><td style="' + th + '">备注</td></tr>';
+  data.loans.forEach(function(r, i) {
+    var loanStart = r.date < eStart ? eStart : r.date;
+    var days = 0, int = 0;
+    if (loanStart <= endDate) { days = daysBetween(loanStart, endDate); int = r.amount * DAILY_RATE * days; }
+    html += '<tr><td style="' + td + '">' + (i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">借款</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td style="' + tdR + '">' + days + '</td><td style="' + tdR + '">' + int.toFixed(2) + '</td><td style="' + td + '">' + (r.remark || '') + '</td></tr>';
+  });
+  data.repayments.forEach(function(r, i) {
+    html += '<tr><td style="' + td + '">' + (data.loans.length + i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">还款</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td style="' + td + '">-</td><td style="' + td + '">-</td><td style="' + td + '">' + (r.remark || '') + '</td></tr>';
+  });
+  html += '<tr><td style="' + tdB + '" colspan="3">累计借款</td><td style="' + tdBR + '">' + fmt(totalBorrowed) + '</td><td style="' + tdB + '">累计还款</td><td style="' + tdBR + '" colspan="2">' + fmt(totalRepaid) + '</td></tr>';
+  html += '<tr><td style="' + tdB + '" colspan="3">未还本金</td><td style="' + tdBR + '">' + fmt(outstanding) + '</td><td style="' + tdB + '">本月利息</td><td style="' + tdBR + '" colspan="2">' + fmt(monthInterest) + '</td></tr>';
+  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+
+  html += '<tr><td colspan="7" style="padding:10px;font-size:11px;color:#999;text-align:center;">淘宝记账报表 \u00b7 云端同步版 \u00b7 生成时间：' + new Date().toLocaleString('zh-CN') + ' \u00b7 年利率17.64%单利</td></tr>';
+  html += '</table></body></html>';
+
+  var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '淘宝记账报表_' + month + '.xls';
+  a.click();
+}
+
+// ========== 初始化 ==========
+function init() {
+  document.getElementById('curMonth').value = new Date().toISOString().slice(0, 7);
+  var t = today();
+  ['dA', 'dB', 'dE', 'loanDate', 'repayDate'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = t;
+  });
+  loadFromSupabase();
+  setupRealtime();
+}
+
+// 页面加载完成后初始化
 init();
-
-// 将所有函数暴露到全局作用域，供 onclick 调用
-window.addLoan = addLoan;
-window.addRepay = addRepay;
-window.delLoan = delLoan;
-window.delRepay = delRepay;
-window.addInc = addInc;
-window.addExp = addExp;
-window.delItem = delItem;
-window.exportCSV = exportCSV;
-window.renderAll = renderAll;
 </script>
 </body>
 </html>
