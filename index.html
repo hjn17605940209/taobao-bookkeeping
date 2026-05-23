@@ -1,741 +1,2399 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>淘宝记账 · 双店铺利润表 · 云端同步版</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #f7f5f0; --surface: #ffffff; --accent: #c4501a; --accent-light: #fdf0ec;
-    --text-primary: #1a1a1a; --text-secondary: #6b6560; --text-muted: #a09a93;
-    --border: #e5e1da; --green: #1d7a46; --green-light: #e6f4ec;
-    --red: #b83228; --red-light: #fcecea; --blue: #2563a8; --blue-light: #e8f0fa;
-    --yellow: #a67c00; --yellow-light: #fdf6e3; --purple: #6b3fa0; --purple-light: #f0eaf5;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text-primary);line-height:1.6}
-  .mono{font-family:'JetBrains Mono',monospace}
-  .container{max-width:1280px;margin:0 auto;padding:28px 20px 80px}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人记账 - Personal Bookkeeping</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        /* CSS Variables - Warm Tone Design */
+        :root {
+            --bg: #f7f5f0;
+            --bg-card: #ffffff;
+            --bg-secondary: #faf8f3;
+            --accent: #c4501a;
+            --accent-light: #e87a3d;
+            --accent-dark: #9a3d14;
+            --text-primary: #2d2a26;
+            --text-secondary: #6b6560;
+            --text-muted: #9a9590;
+            --border: #e8e4de;
+            --shadow: rgba(45, 42, 38, 0.08);
+            --shadow-lg: rgba(45, 42, 38, 0.12);
+            --income: #2d8a4e;
+            --income-light: #e8f5ed;
+            --expense: #c4501a;
+            --expense-light: #fdf2ed;
+            --transfer: #5b7ba3;
+            --transfer-light: #eef2f7;
+            --warning: #d4a017;
+            --danger: #c41a1a;
+            --success: #2d8a4e;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-  .header{margin-bottom:28px;animation:fadeDown .5s ease}
-  .header-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px}
-  .header h1{font-size:26px;font-weight:700;letter-spacing:-.5px}
-  .header h1 span{color:var(--accent)}
-  .header-sub{font-size:13px;color:var(--text-secondary);margin-top:3px}
-  .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .month-sel{display:flex;align-items:center;gap:6px;background:var(--surface);padding:7px 14px;border-radius:8px;border:1px solid var(--border);box-shadow:var(--shadow-sm)}
-  .month-sel label{color:var(--text-secondary);font-size:13px;font-weight:500}
-  .month-sel input{border:none;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-primary);background:transparent;outline:none;width:115px}
-  .btn-top{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text-secondary);transition:all .2s;font-family:'Noto Sans SC',sans-serif;box-shadow:var(--shadow-sm)}
-  .btn-top:hover{border-color:var(--accent);color:var(--accent)}
-  .sync-status{font-size:11px;padding:4px 10px;border-radius:4px;background:var(--green-light);color:var(--green);display:flex;align-items:center;gap:5px}
-  .sync-status.syncing{background:var(--yellow-light);color:var(--yellow)}
-  .sync-status.error{background:var(--red-light);color:var(--red)}
-  .sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px}
-  .sum-card{background:var(--surface);border-radius:10px;padding:14px;border:1px solid var(--border);box-shadow:var(--shadow-sm);animation:fadeUp .5s ease both}
-  .sum-card:nth-child(1){animation-delay:.03s}.sum-card:nth-child(2){animation-delay:.06s}
-  .sum-card:nth-child(3){animation-delay:.09s}.sum-card:nth-child(4){animation-delay:.12s}
-  .sum-card:nth-child(5){animation-delay:.15s}.sum-card:nth-child(6){animation-delay:.18s}
-  .sum-card:nth-child(7){animation-delay:.21s}.sum-card:nth-child(8){animation-delay:.24s}
-  .sum-card .lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:500;margin-bottom:3px}
-  .sum-card .val{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:500}
-  .sum-card .sub{font-size:10px;color:var(--text-secondary);margin-top:1px}
-  .sum-card.pos .val{color:var(--green)}.sum-card.neg .val{color:var(--red)}
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
 
-  .sec{background:var(--surface);border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm);margin-bottom:18px;overflow:hidden;animation:fadeUp .5s ease both}
-  .sec-hd{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
-  .sec-hd h2{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
-  .sec-hd h2 .ic{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-  .ic-blue{background:var(--blue-light);color:var(--blue)}.ic-green{background:var(--green-light);color:var(--green)}
-  .ic-purple{background:var(--purple-light);color:var(--purple)}.ic-yellow{background:var(--yellow-light);color:var(--yellow)}
-  .ic-red{background:var(--red-light);color:var(--red)}
-  .badge{font-size:10px;padding:2px 9px;border-radius:20px;font-weight:500;font-family:'JetBrains Mono',monospace}
-  .badge-blue{background:var(--blue-light);color:var(--blue)}.badge-green{background:var(--green-light);color:var(--green)}
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-  .tw{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  thead th{background:#faf9f6;padding:8px 12px;text-align:left;font-weight:500;color:var(--text-secondary);font-size:11px;letter-spacing:.3px;border-bottom:1px solid var(--border);white-space:nowrap}
-  tbody td{padding:8px 12px;border-bottom:1px solid #f0ede8;vertical-align:middle}
-  tbody tr:last-child td{border-bottom:none}
-  tbody tr:hover{background:#faf9f6}
-  .amt-pos{color:var(--green);font-weight:500}.amt-neg{color:var(--red);font-weight:500}
-  .tag{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:500}
-  .t-cost{background:var(--blue-light);color:var(--blue)}.t-ship{background:var(--yellow-light);color:var(--yellow)}
-  .t-brush{background:var(--purple-light);color:var(--purple)}.t-platform{background:#f0ede8;color:var(--text-secondary)}
-  .t-promo{background:var(--accent-light);color:var(--accent)}.t-fine{background:var(--red-light);color:var(--red)}
-  .t-pack{background:var(--green-light);color:var(--green)}.t-return{background:#fce8e8;color:#a03030}
-  .t-labor{background:#e8eaf5;color:#3949ab}.t-interest{background:#f3e5f5;color:#7b1fa2}
-  .t-other{background:#f0ede8;color:var(--text-muted)}.t-loan{background:#f3e5f5;color:#7b1fa2}
-  .t-repay{background:#e6f4ec;color:#1d7a46}
-  .remark{color:var(--text-muted);font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .empty{text-align:center;padding:28px;color:var(--text-muted);font-size:12px}
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
 
-  .add-row{display:flex;gap:5px;padding:9px 12px;background:#faf9f6;border-top:1px solid var(--border);align-items:center;flex-wrap:wrap}
-  .add-row input,.add-row select{border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;font-family:'Noto Sans SC',sans-serif;color:var(--text-primary);background:var(--surface);outline:none;transition:border-color .2s}
-  .add-row input:focus,.add-row select:focus{border-color:var(--accent)}
-  .add-row input::placeholder{color:var(--text-muted)}
-  .add-row input[type="date"]{width:115px}.add-row input[type="number"]{width:80px}
-  .btn-add{background:var(--text-primary);color:#fff;border:none;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .2s;font-family:'Noto Sans SC',sans-serif}
-  .btn-add:hover{background:var(--accent)}
-  .btn-del{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:15px;padding:1px 5px;border-radius:3px;transition:color .2s,background .2s}
-  .btn-del:hover{color:var(--red);background:var(--red-light)}
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
 
-  .pl-wrap{padding:18px}
-  .pl-table{width:100%;max-width:500px}
-  .pl-table tr td{padding:6px 0;font-size:13px}
-  .pl-table tr td:last-child{text-align:right;font-family:'JetBrains Mono',monospace}
-  .pl-table .pl-sep td{border-top:2px solid var(--text-primary);padding-top:10px;font-weight:700;font-size:15px}
-  .pl-table .pl-sub{color:var(--text-secondary);font-size:12px}
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
 
-  .loan-summary{display:flex;gap:20px;padding:14px 18px;background:#faf9f6;border-bottom:1px solid var(--border);flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
-  .loan-summary span b{font-family:'JetBrains Mono',monospace;color:var(--text-primary)}
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
 
-  .notes{margin-top:24px;padding:16px 18px;background:var(--surface);border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm)}
-  .notes h3{font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary)}
-  .notes ul{list-style:none;display:flex;flex-direction:column;gap:4px}
-  .notes li{font-size:11px;color:var(--text-muted);padding-left:14px;position:relative}
-  .notes li::before{content:'\00b7';position:absolute;left:0;color:var(--accent);font-weight:700;font-size:16px;line-height:1}
-  .footer{text-align:center;margin-top:32px;font-size:10px;color:var(--text-muted)}
+        .animate-slide-in {
+            animation: slideIn 0.4s ease-out forwards;
+        }
 
-  @media print{body{background:#fff}.header-right,.add-row,.btn-del,.btn-top,.notes{display:none!important}.container{padding:10px}.sec{break-inside:avoid;box-shadow:none;border:1px solid #ddd}.sum-card{box-shadow:none;border:1px solid #ddd}}
-  @keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-  @media(max-width:768px){.container{padding:14px 10px 60px}.header h1{font-size:20px}.sum-grid{grid-template-columns:repeat(2,1fr)}.add-row{flex-wrap:wrap}.add-row input[type="date"]{width:100%}}
-</style>
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1::before {
+            content: '📊';
+            font-size: 32px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+        }
+
+        .sync-status.syncing::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--accent);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .sync-status.synced::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(196, 80, 26, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #a01515;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #236b3b;
+        }
+
+        .btn-large {
+            padding: 16px 32px;
+            font-size: 16px;
+            border-radius: var(--radius);
+        }
+
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border-radius: 50%;
+        }
+
+        /* Account Cards */
+        .accounts-section {
+            margin-bottom: 28px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .account-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 2px solid transparent;
+            box-shadow: 0 2px 8px var(--shadow);
+            animation: fadeIn 0.5s ease-out backwards;
+        }
+
+        .account-card:nth-child(1) { animation-delay: 0.1s; }
+        .account-card:nth-child(2) { animation-delay: 0.15s; }
+        .account-card:nth-child(3) { animation-delay: 0.2s; }
+        .account-card:nth-child(4) { animation-delay: 0.25s; }
+        .account-card:nth-child(5) { animation-delay: 0.3s; }
+
+        .account-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--shadow-lg);
+        }
+
+        .account-card.active {
+            border-color: var(--accent);
+            background: var(--expense-light);
+        }
+
+        .account-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .account-name {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .account-balance {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .account-card.credit .account-balance {
+            color: var(--expense);
+        }
+
+        /* Summary Cards */
+        .summary-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 2px 8px var(--shadow);
+            animation: fadeIn 0.5s ease-out backwards;
+            animation-delay: 0.35s;
+        }
+
+        .summary-card.income {
+            border-left: 4px solid var(--income);
+        }
+
+        .summary-card.expense {
+            border-left: 4px solid var(--expense);
+        }
+
+        .summary-card.balance {
+            border-left: 4px solid var(--accent);
+        }
+
+        .summary-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .summary-card.income .summary-value {
+            color: var(--income);
+        }
+
+        .summary-card.expense .summary-value {
+            color: var(--expense);
+        }
+
+        .summary-card.balance .summary-value {
+            color: var(--accent);
+        }
+
+        /* Budget Progress */
+        .budget-progress {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 2px 8px var(--shadow);
+            animation: fadeIn 0.5s ease-out backwards;
+            animation-delay: 0.4s;
+        }
+
+        .budget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .budget-title {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .budget-stats {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: var(--bg-secondary);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-light), var(--accent));
+            border-radius: 5px;
+            transition: width 0.6s ease;
+            position: relative;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, var(--warning), #e6b800);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, var(--danger), #e02020);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            animation: fadeIn 0.5s ease-out backwards;
+            animation-delay: 0.45s;
+        }
+
+        .quick-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 20px 24px;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--shadow-lg);
+        }
+
+        .quick-btn.income {
+            background: var(--income-light);
+            color: var(--income);
+        }
+
+        .quick-btn.expense {
+            background: var(--expense-light);
+            color: var(--expense);
+        }
+
+        .quick-btn.transfer {
+            background: var(--transfer-light);
+            color: var(--transfer);
+        }
+
+        .quick-btn .icon {
+            font-size: 32px;
+        }
+
+        .quick-btn .label {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /* Charts Section */
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 2px 8px var(--shadow);
+            animation: fadeIn 0.5s ease-out backwards;
+            animation-delay: 0.5s;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        /* Transactions Section */
+        .transactions-section {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 2px 8px var(--shadow);
+            animation: fadeIn 0.5s ease-out backwards;
+            animation-delay: 0.55s;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 14px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .transaction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .transaction-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            animation: slideIn 0.3s ease-out backwards;
+        }
+
+        .transaction-item:hover {
+            background: var(--bg);
+            transform: translateX(4px);
+        }
+
+        .transaction-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .transaction-icon.income {
+            background: var(--income-light);
+        }
+
+        .transaction-icon.expense {
+            background: var(--expense-light);
+        }
+
+        .transaction-icon.transfer {
+            background: var(--transfer-light);
+        }
+
+        .transaction-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .transaction-category {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .transaction-meta {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .transaction-amount {
+            font-size: 18px;
+            font-weight: 700;
+            margin-right: 16px;
+        }
+
+        .transaction-amount.income {
+            color: var(--income);
+        }
+
+        .transaction-amount.expense {
+            color: var(--expense);
+        }
+
+        .transaction-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(45, 42, 38, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.95) translateY(20px);
+            transition: var(--transition);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            padding: 24px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 15px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(196, 80, 26, 0.1);
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .category-option {
+            padding: 12px 8px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg-secondary);
+        }
+
+        .category-option:hover {
+            border-color: var(--accent-light);
+        }
+
+        .category-option.selected {
+            border-color: var(--accent);
+            background: var(--expense-light);
+        }
+
+        .category-option .icon {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .category-option .name {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .modal-footer {
+            padding: 0 24px 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .tab.active {
+            color: var(--accent);
+            background: var(--expense-light);
+            font-weight: 600;
+        }
+
+        /* Loan Section */
+        .loan-section {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 2px 8px var(--shadow);
+            animation: fadeIn 0.5s ease-out backwards;
+            animation-delay: 0.6s;
+        }
+
+        .loan-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .loan-stat {
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+        }
+
+        .loan-stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--expense);
+        }
+
+        .loan-stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .accounts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .account-card {
+                padding: 16px;
+            }
+
+            .account-balance {
+                font-size: 18px;
+            }
+
+            .summary-section {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-value {
+                font-size: 24px;
+            }
+
+            .quick-actions {
+                flex-direction: column;
+            }
+
+            .quick-btn {
+                flex-direction: row;
+                justify-content: center;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 220px;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filter-bar {
+                width: 100%;
+            }
+
+            .filter-bar select,
+            .filter-bar input {
+                flex: 1;
+            }
+
+            .transaction-item {
+                flex-wrap: wrap;
+            }
+
+            .transaction-amount {
+                width: 100%;
+                text-align: right;
+                margin: 8px 0 0;
+            }
+
+            .category-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .modal {
+                width: 95%;
+                max-height: 85vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .accounts-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .account-card {
+                padding: 12px;
+            }
+
+            .account-icon {
+                font-size: 24px;
+            }
+
+            .category-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .category-option {
+                padding: 10px 4px;
+            }
+
+            .category-option .icon {
+                font-size: 20px;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .header-actions,
+            .quick-actions,
+            .transaction-actions,
+            .modal-overlay,
+            .btn {
+                display: none !important;
+            }
+
+            body {
+                background: white;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .account-card,
+            .summary-card,
+            .chart-card,
+            .transactions-section,
+            .loan-section {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                break-inside: avoid;
+            }
+        }
+
+        /* Loading State */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 50%, var(--bg-secondary) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-sm);
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 14px 20px;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 4px 20px var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            min-width: 280px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .toast.success {
+            border-left-color: var(--success);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+
+        .toast.warning {
+            border-left-color: var(--warning);
+        }
+
+        .toast-icon {
+            font-size: 20px;
+        }
+
+        .toast-message {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 18px;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>个人记账</h1>
+            <div class="header-actions">
+                <div class="sync-status" id="syncStatus">正在连接...</div>
+                <button class="btn btn-secondary" onclick="exportToExcel()">📥 导出Excel</button>
+                <button class="btn btn-secondary" onclick="window.print()">🖨️ 打印</button>
+                <button class="btn btn-primary" onclick="openBudgetModal()">💰 预算设置</button>
+            </div>
+        </header>
 
-  <div class="header">
-    <div class="header-top">
-      <div>
-        <h1>淘宝<span>记账</span></h1>
-        <p class="header-sub">双店铺利润表 · 内裤店 + 衣服店 · 云端同步版</p>
-      </div>
-      <div class="header-right">
-        <div class="sync-status" id="syncStatus"><span class="sync-dot"></span>同步中...</div>
-        <div class="month-sel"><label>账期</label><input type="month" id="curMonth" onchange="renderAll()"></div>
-        <button class="btn-top" onclick="exportCSV()">导出Excel</button>
-        <button class="btn-top" onclick="window.print()">打印/PDF</button>
-      </div>
+        <!-- Accounts Section -->
+        <section class="accounts-section">
+            <h2 class="section-title">💳 我的账户</h2>
+            <div class="accounts-grid" id="accountsGrid">
+                <!-- Account cards will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Summary Section -->
+        <section class="summary-section">
+            <div class="summary-card income">
+                <div class="summary-label">本月收入</div>
+                <div class="summary-value" id="monthIncome">¥0.00</div>
+            </div>
+            <div class="summary-card expense">
+                <div class="summary-label">本月支出</div>
+                <div class="summary-value" id="monthExpense">¥0.00</div>
+            </div>
+            <div class="summary-card balance">
+                <div class="summary-label">本月结余</div>
+                <div class="summary-value" id="monthBalance">¥0.00</div>
+            </div>
+        </section>
+
+        <!-- Budget Progress -->
+        <div class="budget-progress" id="budgetSection" style="display: none;">
+            <div class="budget-header">
+                <span class="budget-title">📊 月度预算</span>
+                <span class="budget-stats" id="budgetStats">已用 ¥0 / ¥0</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="budgetProgress" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <section class="quick-actions">
+            <button class="quick-btn income" onclick="openTransactionModal('income')">
+                <span class="icon">💰</span>
+                <span class="label">记收入</span>
+            </button>
+            <button class="quick-btn expense" onclick="openTransactionModal('expense')">
+                <span class="icon">💸</span>
+                <span class="label">记支出</span>
+            </button>
+            <button class="quick-btn transfer" onclick="openTransactionModal('transfer')">
+                <span class="icon">🔄</span>
+                <span class="label">转账</span>
+            </button>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-section">
+            <div class="chart-card">
+                <h3 class="chart-title">📊 支出分类占比</h3>
+                <div class="chart-container">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3 class="chart-title">📈 近6个月收支趋势</h3>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loan Section -->
+        <section class="loan-section" id="loanSection">
+            <div class="section-header">
+                <h2 class="section-title">💳 贷款管理</h2>
+                <div>
+                    <button class="btn btn-primary" onclick="openLoanModal()">➕ 新增借款</button>
+                    <button class="btn btn-secondary" onclick="openRepaymentModal()">💵 记录还款</button>
+                </div>
+            </div>
+            <div class="loan-stats" id="loanStats">
+                <!-- Loan stats will be rendered here -->
+            </div>
+            <div class="transaction-list" id="loanList">
+                <!-- Loan list will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Transactions Section -->
+        <section class="transactions-section">
+            <div class="section-header">
+                <h2 class="section-title">📝 收支明细</h2>
+                <div class="filter-bar">
+                    <select id="monthFilter" onchange="filterByMonth()">
+                        <!-- Month options will be populated -->
+                    </select>
+                    <select id="accountFilter" onchange="filterByAccount()">
+                        <option value="">所有账户</option>
+                    </select>
+                    <input type="text" id="searchInput" placeholder="搜索备注..." oninput="searchTransactions()">
+                </div>
+            </div>
+            <div class="transaction-list" id="transactionList">
+                <!-- Transactions will be rendered here -->
+            </div>
+        </section>
     </div>
-  </div>
 
-  <!-- Summary -->
-  <div class="sum-grid">
-    <div class="sum-card"><div class="lbl">内裤店收入</div><div class="val" id="sIncA">¥0</div><div class="sub">店铺A</div></div>
-    <div class="sum-card"><div class="lbl">衣服店收入</div><div class="val" id="sIncB">¥0</div><div class="sub">店铺B</div></div>
-    <div class="sum-card"><div class="lbl">总支出</div><div class="val" id="sExp">¥0</div><div class="sub">本月累计</div></div>
-    <div class="sum-card"><div class="lbl">贷款利息</div><div class="val" id="sInt">¥0</div><div class="sub">本月应付</div></div>
-    <div class="sum-card"><div class="lbl">毛利润</div><div class="val" id="sGross">¥0</div><div class="sub">收入−货款−运费</div></div>
-    <div class="sum-card"><div class="lbl">纯利润</div><div class="val" id="sNet">¥0</div><div class="sub">收入−全部支出</div></div>
-    <div class="sum-card"><div class="lbl">每人应分</div><div class="val" id="sHalf">¥0</div><div class="sub">纯利 ÷ 2</div></div>
-    <div class="sum-card"><div class="lbl">利润率</div><div class="val" id="sRate">0%</div><div class="sub">纯利 ÷ 收入</div></div>
-  </div>
+    <!-- Transaction Modal -->
+    <div class="modal-overlay" id="transactionModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="transactionModalTitle">记一笔</h3>
+                <button class="modal-close" onclick="closeModal('transactionModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs" id="transactionTabs">
+                    <button class="tab active" data-type="expense" onclick="switchTransactionType('expense')">支出</button>
+                    <button class="tab" data-type="income" onclick="switchTransactionType('income')">收入</button>
+                    <button class="tab" data-type="transfer" onclick="switchTransactionType('transfer')">转账</button>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">选择分类</label>
+                    <div class="category-grid" id="categoryGrid">
+                        <!-- Categories will be rendered here -->
+                    </div>
+                </div>
 
-  <!-- Loans -->
-  <div class="sec" style="animation-delay:.05s">
-    <div class="sec-hd">
-      <h2><span class="ic" style="background:#f3e5f5;color:#7b1fa2">借</span> 贷款管理</h2>
-      <span style="font-size:11px;color:var(--text-muted)">年利率 17.64% 单利 · 日利率 0.0483%</span>
+                <div class="form-group" id="fromAccountGroup">
+                    <label class="form-label" id="fromAccountLabel">支出账户</label>
+                    <select class="form-select" id="fromAccount">
+                        <!-- Accounts will be populated -->
+                    </select>
+                </div>
+
+                <div class="form-group" id="toAccountGroup" style="display: none;">
+                    <label class="form-label">转入账户</label>
+                    <select class="form-select" id="toAccount">
+                        <!-- Accounts will be populated -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">金额</label>
+                    <input type="number" class="form-input" id="transactionAmount" placeholder="0.00" step="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">日期</label>
+                    <input type="date" class="form-input" id="transactionDate">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">备注（可选）</label>
+                    <input type="text" class="form-input" id="transactionNote" placeholder="添加备注...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('transactionModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveTransaction()">保存</button>
+            </div>
+        </div>
     </div>
-    <div class="loan-summary" id="loanSummary">
-      <span>累计借款: <b id="lTotalBorrow">¥0</b></span>
-      <span>累计还款: <b id="lTotalRepay">¥0</b></span>
-      <span>未还本金: <b id="lOutstanding">¥0</b></span>
-      <span>本月利息: <b id="lMonthInt">¥0</b></span>
-      <span>累计利息: <b id="lTotalInt">¥0</b></span>
+
+    <!-- Budget Modal -->
+    <div class="modal-overlay" id="budgetModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">💰 预算设置</h3>
+                <button class="modal-close" onclick="closeModal('budgetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">月度总预算</label>
+                    <input type="number" class="form-input" id="totalBudget" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">预算周期</label>
+                    <select class="form-select" id="budgetPeriod">
+                        <option value="monthly">每月</option>
+                        <option value="weekly">每周</option>
+                        <option value="yearly">每年</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('budgetModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveBudget()">保存预算</button>
+            </div>
+        </div>
     </div>
-    <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:var(--text-secondary)">借款记录</div>
-    <div class="tw"><table>
-      <thead><tr><th>日期</th><th>借款金额 (¥)</th><th>已计息天数</th><th>本月利息 (¥)</th><th>备注</th><th></th></tr></thead>
-      <tbody id="loanBody"></tbody>
-    </table></div>
-    <div class="add-row">
-      <input type="date" id="loanDate">
-      <input type="number" id="loanAmount" placeholder="借款金额" step="100" min="0" style="width:110px">
-      <input type="text" id="loanRemark" placeholder="备注（选填）" style="flex:1;min-width:100px">
-      <button class="btn-add" onclick="addLoan()">+ 添加借款</button>
+
+    <!-- Loan Modal -->
+    <div class="modal-overlay" id="loanModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">➕ 新增借款</h3>
+                <button class="modal-close" onclick="closeModal('loanModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">借款人</label>
+                    <input type="text" class="form-input" id="loanBorrower" placeholder="借款人姓名">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">借款金额</label>
+                    <input type="number" class="form-input" id="loanAmount" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">借款日期</label>
+                    <input type="date" class="form-input" id="loanDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">年利率 (%)</label>
+                    <input type="number" class="form-input" id="loanRate" value="17.64" step="0.01">
+                    <small style="color: var(--text-muted);">默认年利率 17.64%，日利率约 0.0483%</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">备注</label>
+                    <input type="text" class="form-input" id="loanNote" placeholder="可选">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('loanModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveLoan()">保存</button>
+            </div>
+        </div>
     </div>
-    <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:var(--text-secondary);border-top:1px solid var(--border)">还款记录</div>
-    <div class="tw"><table>
-      <thead><tr><th>日期</th><th>还款金额 (¥)</th><th>备注</th><th></th></tr></thead>
-      <tbody id="repayBody"></tbody>
-    </table></div>
-    <div class="add-row">
-      <input type="date" id="repayDate">
-      <input type="number" id="repayAmount" placeholder="还款金额" step="100" min="0" style="width:110px">
-      <input type="text" id="repayRemark" placeholder="备注（选填）" style="flex:1;min-width:100px">
-      <button class="btn-add" onclick="addRepay()">+ 添加还款</button>
+
+    <!-- Repayment Modal -->
+    <div class="modal-overlay" id="repaymentModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">💵 记录还款</h3>
+                <button class="modal-close" onclick="closeModal('repaymentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">选择借款</label>
+                    <select class="form-select" id="repaymentLoan">
+                        <!-- Active loans will be populated -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">还款金额</label>
+                    <input type="number" class="form-input" id="repaymentAmount" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">还款日期</label>
+                    <input type="date" class="form-input" id="repaymentDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">还款类型</label>
+                    <select class="form-select" id="repaymentType">
+                        <option value="principal">本金</option>
+                        <option value="interest">利息</option>
+                        <option value="both">本金+利息</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('repaymentModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveRepayment()">保存</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <!-- Store A Income -->
-  <div class="sec" style="animation-delay:.08s">
-    <div class="sec-hd">
-      <h2><span class="ic ic-green">A</span> 内裤店 · 收入明细</h2>
-      <span class="badge badge-green" id="cntA">0 笔</span>
-    </div>
-    <div class="tw"><table><thead><tr><th>日期</th><th>订单/说明</th><th>类型</th><th>金额 (¥)</th><th>备注</th><th></th></tr></thead><tbody id="bodyA"></tbody></table></div>
-    <div class="add-row">
-      <input type="date" id="dA">
-      <input type="text" id="descA" placeholder="订单号或说明" style="flex:1;min-width:110px">
-      <select id="typeA"><option value="sale">销售</option><option value="refund">退款</option><option value="other">其他</option></select>
-      <input type="number" id="amtA" placeholder="金额" step="0.01">
-      <input type="text" id="rmkA" placeholder="备注" style="width:90px">
-      <button class="btn-add" onclick="addInc('A')">+ 记一笔</button>
-    </div>
-  </div>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Store B Income -->
-  <div class="sec" style="animation-delay:.11s">
-    <div class="sec-hd">
-      <h2><span class="ic ic-purple">B</span> 衣服店 · 收入明细</h2>
-      <span class="badge badge-green" id="cntB">0 笔</span>
-    </div>
-    <div class="tw"><table><thead><tr><th>日期</th><th>订单/说明</th><th>类型</th><th>金额 (¥)</th><th>备注</th><th></th></tr></thead><tbody id="bodyB"></tbody></table></div>
-    <div class="add-row">
-      <input type="date" id="dB">
-      <input type="text" id="descB" placeholder="订单号或说明" style="flex:1;min-width:110px">
-      <select id="typeB"><option value="sale">销售</option><option value="refund">退款</option><option value="other">其他</option></select>
-      <input type="number" id="amtB" placeholder="金额" step="0.01">
-      <input type="text" id="rmkB" placeholder="备注" style="width:90px">
-      <button class="btn-add" onclick="addInc('B')">+ 记一笔</button>
-    </div>
-  </div>
+    <script>
+        // ==========================================
+        // Global Variables
+        // ==========================================
+        var _sb = null;
+        var currentTransactionType = 'expense';
+        var selectedCategory = null;
+        var accounts = [];
+        var categories = [];
+        var transactions = [];
+        var budgets = [];
+        var loans = [];
+        var repayments = [];
+        var expenseChart = null;
+        var trendChart = null;
+        var currentAccountFilter = '';
 
-  <!-- Expenses -->
-  <div class="sec" style="animation-delay:.14s">
-    <div class="sec-hd">
-      <h2><span class="ic ic-red">支</span> 支出明细</h2>
-      <span class="badge badge-blue" id="cntE">0 笔</span>
-    </div>
-    <div class="tw"><table><thead><tr><th>日期</th><th>用途说明</th><th>类别</th><th>归属</th><th>金额 (¥)</th><th>备注</th><th></th></tr></thead><tbody id="bodyE"></tbody></table></div>
-    <div class="add-row">
-      <input type="date" id="dE">
-      <input type="text" id="descE" placeholder="用途说明" style="flex:1;min-width:100px">
-      <select id="catE">
-        <option value="cost">货款/成本</option><option value="ship">运费/快递</option><option value="brush">刷单</option>
-        <option value="platform">平台扣点/佣金</option><option value="promo">推广费</option><option value="fine">店铺罚款</option>
-        <option value="pack">包装耗材</option><option value="return">退货损失</option><option value="labor">人工/客服</option>
-        <option value="interest">贷款利息</option><option value="other">其他</option>
-      </select>
-      <select id="storeE"><option value="common">公共</option><option value="storeA">内裤店</option><option value="storeB">衣服店</option></select>
-      <input type="number" id="amtE" placeholder="金额" step="0.01" min="0">
-      <input type="text" id="rmkE" placeholder="备注" style="width:90px">
-      <button class="btn-add" onclick="addExp()">+ 记一笔</button>
-    </div>
-  </div>
+        // ==========================================
+        // Supabase Configuration
+        // ==========================================
+        var SUPABASE_URL = 'https://vjildthiuxhoukakvtui.supabase.co';
+        var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg';
 
-  <!-- P&L -->
-  <div class="sec" style="animation-delay:.17s">
-    <div class="sec-hd"><h2><span class="ic ic-yellow">表</span> 本月利润表（自动生成）</h2></div>
-    <div class="pl-wrap"><table class="pl-table" id="plTable"></table></div>
-  </div>
+        // ==========================================
+        // Category Definitions
+        // ==========================================
+        var EXPENSE_CATEGORIES = [
+            { id: 'food', name: '餐饮', icon: '🍔', color: '#e87a3d' },
+            { id: 'transport', name: '交通', icon: '🚗', color: '#5b7ba3' },
+            { id: 'shopping', name: '购物', icon: '🛍️', color: '#c4501a' },
+            { id: 'entertainment', name: '娱乐', icon: '🎬', color: '#9b59b6' },
+            { id: 'housing', name: '居住', icon: '🏠', color: '#2d8a4e' },
+            { id: 'medical', name: '医疗', icon: '🏥', color: '#e74c3c' },
+            { id: 'education', name: '教育', icon: '📚', color: '#3498db' },
+            { id: 'utilities', name: '水电', icon: '💡', color: '#f39c12' },
+            { id: 'communication', name: '通讯', icon: '📱', color: '#1abc9c' },
+            { id: 'clothing', name: '服饰', icon: '👔', color: '#e91e63' },
+            { id: 'beauty', name: '美容', icon: '💄', color: '#ff69b4' },
+            { id: 'sports', name: '运动', icon: '⚽', color: '#27ae60' },
+            { id: 'travel', name: '旅游', icon: '✈️', color: '#3498db' },
+            { id: 'pet', name: '宠物', icon: '🐾', color: '#8b4513' },
+            { id: 'gift', name: '礼物', icon: '🎁', color: '#e74c3c' },
+            { id: 'donation', name: '捐赠', icon: '❤️', color: '#e74c3c' },
+            { id: 'insurance', name: '保险', icon: '🛡️', color: '#34495e' },
+            { id: 'other_expense', name: '其他', icon: '📦', color: '#95a5a6' }
+        ];
 
-  <div class="notes">
-    <h3>使用说明</h3>
-    <ul>
-      <li><b>云端同步版</b>：数据实时同步到云端，多人共享同一套数据</li>
-      <li><b>纯利润 = 总收入 − 全部支出（含贷款利息）</b></li>
-      <li><b>毛利润 = 总收入 − 货款 − 运费</b>（衡量商品本身是否赚钱）</li>
-      <li>贷款利息按每笔借款的实际天数计算，单利 17.64%/年，日利率 ≈ 0.0483%</li>
-      <li>退款请填负数金额（如 -58.00），建议退款完成后再结算当月数据</li>
-      <li>行业利润率一般在 5%-15%，低于 5% 需关注成本控制</li>
-      <li>点击"打印/PDF"可生成对账单发给合伙人</li>
-    </ul>
-  </div>
-  <div class="footer">淘宝记账 · 双店铺利润表 · 云端同步版</div>
-</div>
+        var INCOME_CATEGORIES = [
+            { id: 'salary', name: '工资', icon: '💼', color: '#2d8a4e' },
+            { id: 'bonus', name: '奖金', icon: '🎉', color: '#e87a3d' },
+            { id: 'investment', name: '投资', icon: '📈', color: '#3498db' },
+            { id: 'parttime', name: '兼职', icon: '💪', color: '#9b59b6' },
+            { id: 'gift_income', name: '礼金', icon: '🧧', color: '#e74c3c' },
+            { id: 'refund', name: '退款', icon: '↩️', color: '#1abc9c' },
+            { id: 'other_income', name: '其他', icon: '💰', color: '#95a5a6' }
+        ];
 
-<!-- 通过 CDN 加载 Supabase JS SDK（非 module 方式） -->
-<script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
-<script>
-// ========== Supabase 初始化 ==========
-// 等待 Supabase 库加载完成
-function waitForSupabase(callback) {
-  if (window.supabase && window.supabase.createClient) {
-    callback();
-  } else {
-    setTimeout(function() { waitForSupabase(callback); }, 200);
-  }
-}
+        var TRANSFER_CATEGORIES = [
+            { id: 'transfer', name: '转账', icon: '🔄', color: '#5b7ba3' }
+        ];
 
-var _sb;
-waitForSupabase(function() {
-  _sb = window.supabase.createClient(
-  'https://vjildthiuxhoukakvtui.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg'
-);
-  // 库加载完成后初始化
-  init();
-});
+        // ==========================================
+        // Initialization
+        // ==========================================
+        function waitForSupabase(callback) {
+            if (typeof supabase !== 'undefined' && supabase.createClient) {
+                _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                callback();
+            } else {
+                setTimeout(function() {
+                    waitForSupabase(callback);
+                }, 100);
+            }
+        }
 
-// ========== 数据存储 ==========
-var data = { incomeA: [], incomeB: [], expense: [], loans: [], repayments: [] };
-var DAILY_RATE = 17.64 / 365 / 100;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set today's date for date inputs
+            var today = new Date().toISOString().split('T')[0];
+            document.getElementById('transactionDate').value = today;
+            document.getElementById('loanDate').value = today;
+            document.getElementById('repaymentDate').value = today;
 
-// ========== 工具函数 ==========
-function fmt(n) { return '\u00a5' + Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function today() { return new Date().toISOString().split('T')[0]; }
-function monthRange(m) { var parts = m.split('-').map(Number); var y = parts[0], mo = parts[1]; var s = y + '-' + String(mo).padStart(2, '0') + '-01'; var l = new Date(y, mo, 0).getDate(); var e = y + '-' + String(mo).padStart(2, '0') + '-' + String(l).padStart(2, '0'); return { s: s, e: e, days: l }; }
-function filterMonth(arr) { var m = document.getElementById('curMonth').value; return arr.filter(function(r) { return r.date && r.date.slice(0, 7) === m; }); }
-function daysBetween(a, b) { return Math.max(0, Math.ceil((new Date(b) - new Date(a)) / (1000 * 60 * 60 * 24))); }
+            // Initialize Supabase
+            waitForSupabase(function() {
+                console.log('Supabase initialized');
+                updateSyncStatus('syncing');
+                initializeData();
+            });
 
-// ========== 同步状态 ==========
-function setSyncStatus(status, message) {
-  var el = document.getElementById('syncStatus');
-  el.className = 'sync-status ' + status;
-  el.innerHTML = status === 'syncing' ? '<span class="sync-dot"></span>' + message : message;
-}
+            // Setup month filter
+            setupMonthFilter();
+        });
 
-// ========== 从 Supabase 加载数据 ==========
-function loadFromSupabase() {
-  setSyncStatus('syncing', '同步中...');
+        // ==========================================
+        // Data Loading
+        // ==========================================
+        async function initializeData() {
+            try {
+                await Promise.all([
+                    loadAccounts(),
+                    loadCategories(),
+                    loadTransactions(),
+                    loadBudgets(),
+                    loadLoans(),
+                    loadRepayments()
+                ]);
+                
+                renderAll();
+                updateSyncStatus('synced');
+                showToast('数据同步成功', 'success');
+            } catch (error) {
+                console.error('Error initializing data:', error);
+                updateSyncStatus('error');
+                showToast('数据同步失败: ' + error.message, 'error');
+            }
+        }
 
-  Promise.all([
-    _sb.from('income').select('*').eq('store', 'A').order('date', { ascending: false }),
-    _sb.from('income').select('*').eq('store', 'B').order('date', { ascending: false }),
-    _sb.from('expenses').select('*').order('date', { ascending: false }),
-    _sb.from('loans').select('*').order('date', { ascending: false }),
-    _sb.from('repayments').select('*').order('date', { ascending: false })
-  ]).then(function(results) {
-    data.incomeA = results[0].data || [];
-    data.incomeB = results[1].data || [];
-    data.expense = results[2].data || [];
-    data.loans = results[3].data || [];
-    data.repayments = results[4].data || [];
-    setSyncStatus('', '已同步');
-    renderAll();
-  }).catch(function(e) {
-    console.error('Sync error:', e);
-    setSyncStatus('error', '同步失败');
-  });
-}
+        async function loadAccounts() {
+            var result = await _sb.from('accounts').select('*').order('id');
+            if (result.error) throw result.error;
+            accounts = result.data || [];
+        }
 
-// ========== Realtime 订阅 ==========
-function setupRealtime() {
-  try {
-    _sb.channel('public:income')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'income' }, function() { loadFromSupabase(); })
-      .subscribe();
-    _sb.channel('public:expenses')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, function() { loadFromSupabase(); })
-      .subscribe();
-    _sb.channel('public:loans')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'loans' }, function() { loadFromSupabase(); })
-      .subscribe();
-    _sb.channel('public:repayments')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'repayments' }, function() { loadFromSupabase(); })
-      .subscribe();
-  } catch(e) {
-    console.log('Realtime not available');
-  }
-}
+        async function loadCategories() {
+            var result = await _sb.from('categories').select('*').order('id');
+            if (result.error) throw result.error;
+            categories = result.data || [];
+        }
 
-// ========== 贷款管理 ==========
-function addLoan() {
-  var date = document.getElementById('loanDate').value || today();
-  var amount = parseFloat(document.getElementById('loanAmount').value);
-  var remark = document.getElementById('loanRemark').value.trim() || null;
-  if (isNaN(amount) || amount <= 0) { alert('请填写借款金额'); return; }
+        async function loadTransactions() {
+            var result = await _sb.from('transactions')
+                .select('*')
+                .order('date', { ascending: false })
+                .order('created_at', { ascending: false });
+            if (result.error) throw result.error;
+            transactions = result.data || [];
+        }
 
-  setSyncStatus('syncing', '保存中...');
-  _sb.from('loans').insert([{ date: date, amount: amount, remark: remark }]).then(function(res) {
-    if (res.error) { alert('保存失败: ' + res.error.message); setSyncStatus('error', '保存失败'); return; }
-    document.getElementById('loanAmount').value = '';
-    document.getElementById('loanRemark').value = '';
-    loadFromSupabase();
-  });
-}
+        async function loadBudgets() {
+            var result = await _sb.from('budgets').select('*');
+            if (result.error) throw result.error;
+            budgets = result.data || [];
+        }
 
-function addRepay() {
-  var date = document.getElementById('repayDate').value || today();
-  var amount = parseFloat(document.getElementById('repayAmount').value);
-  var remark = document.getElementById('repayRemark').value.trim() || null;
-  if (isNaN(amount) || amount <= 0) { alert('请填写还款金额'); return; }
+        async function loadLoans() {
+            var result = await _sb.from('loans').select('*').order('date', { ascending: false });
+            if (result.error) throw result.error;
+            loans = result.data || [];
+        }
 
-  setSyncStatus('syncing', '保存中...');
-  _sb.from('repayments').insert([{ date: date, amount: amount, remark: remark }]).then(function(res) {
-    if (res.error) { alert('保存失败: ' + res.error.message); setSyncStatus('error', '保存失败'); return; }
-    document.getElementById('repayAmount').value = '';
-    document.getElementById('repayRemark').value = '';
-    loadFromSupabase();
-  });
-}
+        async function loadRepayments() {
+            var result = await _sb.from('repayments').select('*').order('date', { ascending: false });
+            if (result.error) throw result.error;
+            repayments = result.data || [];
+        }
 
-function delLoan(id) {
-  if (!confirm('确定删除？')) return;
-  setSyncStatus('syncing', '删除中...');
-  _sb.from('loans').delete().eq('id', id).then(function() { loadFromSupabase(); });
-}
+        // ==========================================
+        // Rendering Functions
+        // ==========================================
+        function renderAll() {
+            renderAccounts();
+            renderSummary();
+            renderBudget();
+            renderCategoryGrid();
+            renderCharts();
+            renderLoans();
+            renderTransactions();
+            updateAccountFilter();
+        }
 
-function delRepay(id) {
-  if (!confirm('确定删除？')) return;
-  setSyncStatus('syncing', '删除中...');
-  _sb.from('repayments').delete().eq('id', id).then(function() { loadFromSupabase(); });
-}
+        function renderAccounts() {
+            var grid = document.getElementById('accountsGrid');
+            var accountIcons = {
+                'cash': '💵',
+                'bank': '💳',
+                'alipay': '🔵',
+                'wechat': '🟢',
+                'credit': '💰'
+            };
+            
+            var accountNames = {
+                'cash': '现金',
+                'bank': '银行卡',
+                'alipay': '支付宝',
+                'wechat': '微信',
+                'credit': '信用卡'
+            };
 
-function calcLoanInterest() {
-  var range = monthRange(document.getElementById('curMonth').value);
-  var eStart = range.s, eEnd = range.e;
-  var todayStr = today();
-  var endDate = eEnd > todayStr ? todayStr : eEnd;
-  var totalBorrowed = 0, totalRepaid = 0, monthInterest = 0;
+            grid.innerHTML = accounts.map(function(account) {
+                var isCredit = account.type === 'credit';
+                var activeClass = currentAccountFilter === account.id ? 'active' : '';
+                return `
+                    <div class="account-card ${isCredit ? 'credit' : ''} ${activeClass}" 
+                         onclick="selectAccount('${account.id}')" 
+                         style="animation-delay: ${account.id * 0.05}s">
+                        <div class="account-icon">${accountIcons[account.type] || '💳'}</div>
+                        <div class="account-name">${accountNames[account.type] || account.name}</div>
+                        <div class="account-balance">¥${formatMoney(account.balance)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
 
-  data.loans.forEach(function(loan) {
-    totalBorrowed += loan.amount;
-    var loanStart = loan.date < eStart ? eStart : loan.date;
-    if (loanStart > endDate) return;
-    var days = daysBetween(loanStart, endDate);
-    monthInterest += loan.amount * DAILY_RATE * days;
-  });
+        function renderSummary() {
+            var currentMonth = new Date().toISOString().slice(0, 7);
+            var monthTransactions = transactions.filter(function(t) {
+                return t.date && t.date.startsWith(currentMonth);
+            });
 
-  data.repayments.forEach(function(repay) {
-    totalRepaid += repay.amount;
-    var repayStart = repay.date < eStart ? eStart : repay.date;
-    if (repayStart > endDate) return;
-    var days = daysBetween(repayStart, endDate);
-    monthInterest -= repay.amount * DAILY_RATE * days;
-  });
+            var income = monthTransactions
+                .filter(function(t) { return t.type === 'income'; })
+                .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
 
-  monthInterest = Math.max(0, monthInterest);
-  return { totalBorrowed: totalBorrowed, totalRepaid: totalRepaid, monthInterest: monthInterest };
-}
+            var expense = monthTransactions
+                .filter(function(t) { return t.type === 'expense'; })
+                .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
 
-function calcTotalAccruedInterest() {
-  var total = 0;
-  var todayStr = today();
-  data.loans.forEach(function(loan) {
-    if (loan.date > todayStr) return;
-    var days = daysBetween(loan.date, todayStr);
-    total += loan.amount * DAILY_RATE * days;
-  });
-  data.repayments.forEach(function(repay) {
-    if (repay.date > todayStr) return;
-    var days = daysBetween(repay.date, todayStr);
-    total -= repay.amount * DAILY_RATE * days;
-  });
-  return Math.max(0, total);
-}
+            var balance = income - expense;
 
-// ========== 收入 & 支出 ==========
-function addInc(store) {
-  var date = document.getElementById('d' + store).value || today();
-  var desc = document.getElementById('desc' + store).value.trim();
-  var type = document.getElementById('type' + store).value;
-  var amount = parseFloat(document.getElementById('amt' + store).value);
-  var remark = document.getElementById('rmk' + store).value.trim() || null;
-  if (!desc || isNaN(amount)) { alert('请填写说明和金额'); return; }
+            document.getElementById('monthIncome').textContent = '¥' + formatMoney(income);
+            document.getElementById('monthExpense').textContent = '¥' + formatMoney(expense);
+            document.getElementById('monthBalance').textContent = '¥' + formatMoney(balance);
+        }
 
-  setSyncStatus('syncing', '保存中...');
-  _sb.from('income').insert([{ date: date, store: store, desc: desc, type: type, amount: amount, remark: remark }]).then(function(res) {
-    if (res.error) { alert('保存失败: ' + res.error.message); setSyncStatus('error', '保存失败'); return; }
-    document.getElementById('desc' + store).value = '';
-    document.getElementById('amt' + store).value = '';
-    document.getElementById('rmk' + store).value = '';
-    loadFromSupabase();
-  });
-}
+        function renderBudget() {
+            var currentMonth = new Date().toISOString().slice(0, 7);
+            var budget = budgets.find(function(b) {
+                return b.period === 'monthly' && b.month === currentMonth;
+            });
 
-function addExp() {
-  var date = document.getElementById('dE').value || today();
-  var desc = document.getElementById('descE').value.trim();
-  var cat = document.getElementById('catE').value;
-  var store = document.getElementById('storeE').value;
-  var amount = parseFloat(document.getElementById('amtE').value);
-  var remark = document.getElementById('rmkE').value.trim() || null;
-  if (!desc || isNaN(amount) || amount <= 0) { alert('请填写用途和金额'); return; }
+            var budgetSection = document.getElementById('budgetSection');
+            
+            if (!budget || !budget.amount) {
+                budgetSection.style.display = 'none';
+                return;
+            }
 
-  setSyncStatus('syncing', '保存中...');
-  _sb.from('expenses').insert([{ date: date, desc: desc, cat: cat, store: store, amount: amount, remark: remark }]).then(function(res) {
-    if (res.error) { alert('保存失败: ' + res.error.message); setSyncStatus('error', '保存失败'); return; }
-    document.getElementById('descE').value = '';
-    document.getElementById('amtE').value = '';
-    document.getElementById('rmkE').value = '';
-    loadFromSupabase();
-  });
-}
+            budgetSection.style.display = 'block';
 
-function delItem(table, id) {
-  if (!confirm('确定删除？')) return;
-  setSyncStatus('syncing', '删除中...');
-  _sb.from(table).delete().eq('id', id).then(function() { loadFromSupabase(); });
-}
+            var monthExpense = transactions
+                .filter(function(t) {
+                    return t.type === 'expense' && t.date && t.date.startsWith(currentMonth);
+                })
+                .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
 
-// ========== 渲染 ==========
-var catMap = { cost: '货款/成本', ship: '运费/快递', brush: '刷单', platform: '平台扣点', promo: '推广费', fine: '店铺罚款', pack: '包装耗材', return: '退货损失', labor: '人工/客服', interest: '贷款利息', other: '其他' };
-var catCls = { cost: 't-cost', ship: 't-ship', brush: 't-brush', platform: 't-platform', promo: 't-promo', fine: 't-fine', pack: 't-pack', return: 't-return', labor: 't-labor', interest: 't-interest', other: 't-other' };
-var storeMap = { common: '公共', storeA: '内裤店', storeB: '衣服店' };
-var storeCls = { common: 't-platform', storeA: 't-cost', storeB: 't-brush' };
+            var percentage = Math.min((monthExpense / budget.amount) * 100, 100);
+            var progressFill = document.getElementById('budgetProgress');
+            
+            progressFill.style.width = percentage + '%';
+            progressFill.className = 'progress-fill';
+            
+            if (percentage >= 100) {
+                progressFill.classList.add('danger');
+            } else if (percentage >= 80) {
+                progressFill.classList.add('warning');
+            }
 
-function renderAll() {
-  var mA = filterMonth(data.incomeA);
-  var mB = filterMonth(data.incomeB);
-  var mE = filterMonth(data.expense);
-  var range = monthRange(document.getElementById('curMonth').value);
-  var eStart = range.s, eEnd = range.e;
-  var todayStr = today();
-  var endDate = eEnd > todayStr ? todayStr : eEnd;
+            document.getElementById('budgetStats').textContent = 
+                '已用 ¥' + formatMoney(monthExpense) + ' / ¥' + formatMoney(budget.amount);
+        }
 
-  renderIncTable('bodyA', mA, 'cntA');
-  renderIncTable('bodyB', mB, 'cntB');
-  renderExpTable(mE);
+        function renderCategoryGrid() {
+            var grid = document.getElementById('categoryGrid');
+            var cats = currentTransactionType === 'income' ? INCOME_CATEGORIES : 
+                      currentTransactionType === 'transfer' ? TRANSFER_CATEGORIES : 
+                      EXPENSE_CATEGORIES;
 
-  renderLoanTable(eStart, endDate);
-  renderRepayTable();
+            grid.innerHTML = cats.map(function(cat) {
+                var selected = selectedCategory === cat.id ? 'selected' : '';
+                return `
+                    <div class="category-option ${selected}" onclick="selectCategory('${cat.id}')">
+                        <span class="icon">${cat.icon}</span>
+                        <span class="name">${cat.name}</span>
+                    </div>
+                `;
+            }).join('');
+        }
 
-  var incA = mA.reduce(function(s, r) { return s + r.amount; }, 0);
-  var incB = mB.reduce(function(s, r) { return s + r.amount; }, 0);
-  var totalInc = incA + incB;
-  var totalExp = mE.reduce(function(s, r) { return s + r.amount; }, 0);
+        function renderCharts() {
+            renderExpenseChart();
+            renderTrendChart();
+        }
 
-  var loanInfo = calcLoanInterest();
-  var totalBorrowed = loanInfo.totalBorrowed;
-  var totalRepaid = loanInfo.totalRepaid;
-  var monthInterest = loanInfo.monthInterest;
-  var totalAccruedInt = calcTotalAccruedInterest();
-  var outstanding = Math.max(0, totalBorrowed - totalRepaid);
-  var totalWithLoan = totalExp + monthInterest;
-  var cost = mE.filter(function(r) { return r.cat === 'cost'; }).reduce(function(s, r) { return s + r.amount; }, 0);
-  var ship = mE.filter(function(r) { return r.cat === 'ship'; }).reduce(function(s, r) { return s + r.amount; }, 0);
-  var gross = totalInc - cost - ship;
-  var net = totalInc - totalWithLoan;
-  var half = net / 2;
-  var rate = totalInc > 0 ? (net / totalInc * 100) : 0;
+        function renderExpenseChart() {
+            var ctx = document.getElementById('expenseChart').getContext('2d');
+            var currentMonth = new Date().toISOString().slice(0, 7);
+            
+            var monthExpenses = transactions.filter(function(t) {
+                return t.type === 'expense' && t.date && t.date.startsWith(currentMonth);
+            });
 
-  document.getElementById('sIncA').textContent = fmt(incA);
-  document.getElementById('sIncB').textContent = fmt(incB);
-  document.getElementById('sExp').textContent = fmt(totalExp);
-  document.getElementById('sInt').textContent = fmt(monthInterest);
-  document.getElementById('sGross').textContent = fmt(gross);
-  document.getElementById('sNet').textContent = fmt(net);
-  document.getElementById('sHalf').textContent = fmt(half);
-  document.getElementById('sRate').textContent = rate.toFixed(1) + '%';
-  setCardClass('sGross', gross); setCardClass('sNet', net); setCardClass('sHalf', half);
+            var categoryTotals = {};
+            monthExpenses.forEach(function(t) {
+                var cat = t.category || 'other_expense';
+                categoryTotals[cat] = (categoryTotals[cat] || 0) + (parseFloat(t.amount) || 0);
+            });
 
-  document.getElementById('lTotalBorrow').textContent = fmt(totalBorrowed);
-  document.getElementById('lTotalRepay').textContent = fmt(totalRepaid);
-  document.getElementById('lOutstanding').textContent = fmt(outstanding);
-  document.getElementById('lMonthInt').textContent = fmt(monthInterest);
-  document.getElementById('lTotalInt').textContent = fmt(totalAccruedInt);
+            var labels = [];
+            var data = [];
+            var colors = [];
 
-  renderPL(incA, incB, mE, monthInterest, totalInc, totalWithLoan, gross, net, half, rate);
-}
+            Object.keys(categoryTotals).forEach(function(catId) {
+                var cat = EXPENSE_CATEGORIES.find(function(c) { return c.id === catId; }) || 
+                         { name: '其他', color: '#95a5a6' };
+                if (categoryTotals[catId] > 0) {
+                    labels.push(cat.name);
+                    data.push(categoryTotals[catId]);
+                    colors.push(cat.color);
+                }
+            });
 
-function setCardClass(id, val) {
-  var el = document.getElementById(id);
-  el.closest('.sum-card').className = 'sum-card ' + (val >= 0 ? 'pos' : 'neg');
-}
+            if (expenseChart) {
+                expenseChart.destroy();
+            }
 
-function renderLoanTable(eStart, endDate) {
-  var body = document.getElementById('loanBody');
-  if (!data.loans.length) { body.innerHTML = '<tr><td colspan="6" class="empty">暂无借款记录</td></tr>'; return; }
-  body.innerHTML = data.loans.map(function(r) {
-    var loanStart = r.date < eStart ? eStart : r.date;
-    var days = 0, interest = 0;
-    if (loanStart <= endDate) { days = daysBetween(loanStart, endDate); interest = r.amount * DAILY_RATE * days; }
-    return '<tr>' +
-      '<td class="mono">' + r.date + '</td>' +
-      '<td class="mono amt-neg">' + fmt(r.amount) + '</td>' +
-      '<td class="mono">' + days + ' 天</td>' +
-      '<td class="mono">' + fmt(interest) + '</td>' +
-      '<td class="remark">' + (r.remark || '-') + '</td>' +
-      '<td><button class="btn-del" onclick="delLoan(\'' + r.id + '\')">\u00d7</button></td>' +
-      '</tr>';
-  }).join('');
-}
+            if (data.length === 0) {
+                ctx.font = '14px "Noto Sans SC"';
+                ctx.fillStyle = '#9a9590';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂无支出数据', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
 
-function renderRepayTable() {
-  var body = document.getElementById('repayBody');
-  if (!data.repayments.length) { body.innerHTML = '<tr><td colspan="4" class="empty">暂无还款记录</td></tr>'; return; }
-  body.innerHTML = data.repayments.map(function(r) {
-    return '<tr>' +
-      '<td class="mono">' + r.date + '</td>' +
-      '<td class="mono amt-pos">' + fmt(r.amount) + '</td>' +
-      '<td class="remark">' + (r.remark || '-') + '</td>' +
-      '<td><button class="btn-del" onclick="delRepay(\'' + r.id + '\')">\u00d7</button></td>' +
-      '</tr>';
-  }).join('');
-}
+            expenseChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: { family: 'Noto Sans SC', size: 12 },
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
-function renderIncTable(bodyId, items, cntId) {
-  var body = document.getElementById(bodyId);
-  document.getElementById(cntId).textContent = items.length + ' 笔';
-  if (!items.length) { body.innerHTML = '<tr><td colspan="6" class="empty">暂无记录</td></tr>'; return; }
-  var tm = { sale: '销售', refund: '退款', other: '其他' };
-  body.innerHTML = items.map(function(r) {
-    var cls = r.amount >= 0 ? 'amt-pos' : 'amt-neg';
-    return '<tr>' +
-      '<td class="mono">' + r.date + '</td>' +
-      '<td>' + r.desc + '</td>' +
-      '<td><span class="tag t-cost">' + (tm[r.type] || r.type) + '</span></td>' +
-      '<td class="mono ' + cls + '">' + fmt(r.amount) + '</td>' +
-      '<td class="remark">' + (r.remark || '-') + '</td>' +
-      '<td><button class="btn-del" onclick="delItem(\'income\',\'' + r.id + '\')">\u00d7</button></td>' +
-      '</tr>';
-  }).join('');
-}
+        function renderTrendChart() {
+            var ctx = document.getElementById('trendChart').getContext('2d');
+            
+            var months = [];
+            var incomeData = [];
+            var expenseData = [];
 
-function renderExpTable(items) {
-  var body = document.getElementById('bodyE');
-  document.getElementById('cntE').textContent = items.length + ' 笔';
-  if (!items.length) { body.innerHTML = '<tr><td colspan="7" class="empty">暂无记录</td></tr>'; return; }
-  body.innerHTML = items.map(function(r) {
-    return '<tr>' +
-      '<td class="mono">' + r.date + '</td>' +
-      '<td>' + r.desc + '</td>' +
-      '<td><span class="tag ' + (catCls[r.cat] || 't-other') + '">' + (catMap[r.cat] || r.cat) + '</span></td>' +
-      '<td><span class="tag ' + (storeCls[r.store] || 't-platform') + '">' + (storeMap[r.store] || r.store) + '</span></td>' +
-      '<td class="mono amt-neg">' + fmt(r.amount) + '</td>' +
-      '<td class="remark">' + (r.remark || '-') + '</td>' +
-      '<td><button class="btn-del" onclick="delItem(\'expenses\',\'' + r.id + '\')">\u00d7</button></td>' +
-      '</tr>';
-  }).join('');
-}
+            for (var i = 5; i >= 0; i--) {
+                var d = new Date();
+                d.setMonth(d.getMonth() - i);
+                var monthStr = d.toISOString().slice(0, 7);
+                months.push(d.getMonth() + 1 + '月');
 
-function renderPL(incA, incB, expenses, loanInt, totalInc, totalExp, gross, net, half, rate) {
-  var catTotals = {};
-  Object.keys(catMap).forEach(function(k) { catTotals[k] = 0; });
-  expenses.forEach(function(r) { catTotals[r.cat] = (catTotals[r.cat] || 0) + r.amount; });
+                var monthTrans = transactions.filter(function(t) {
+                    return t.date && t.date.startsWith(monthStr);
+                });
 
-  var h = '<tr><td><b>收入</b></td><td></td></tr>' +
-    '<tr class="pl-sub"><td>  内裤店收入</td><td>' + fmt(incA) + '</td></tr>' +
-    '<tr class="pl-sub"><td>  衣服店收入</td><td>' + fmt(incB) + '</td></tr>' +
-    '<tr style="border-top:1px solid var(--border)"><td><b>收入合计</b></td><td><b>' + fmt(totalInc) + '</b></td></tr>' +
-    '<tr><td style="height:10px"></td><td></td></tr>' +
-    '<tr><td><b>支出</b></td><td></td></tr>';
+                var income = monthTrans
+                    .filter(function(t) { return t.type === 'income'; })
+                    .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
 
-  Object.entries(catMap).forEach(function(entry) {
-    var k = entry[0], v = entry[1];
-    if (catTotals[k] > 0) h += '<tr class="pl-sub"><td>  ' + v + '</td><td>' + fmt(catTotals[k]) + '</td></tr>';
-  });
-  if (loanInt > 0) h += '<tr class="pl-sub"><td>  贷款利息（自动计算）</td><td>' + fmt(loanInt) + '</td></tr>';
+                var expense = monthTrans
+                    .filter(function(t) { return t.type === 'expense'; })
+                    .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
 
-  h += '<tr style="border-top:1px solid var(--border)"><td><b>支出合计</b></td><td><b>' + fmt(totalExp) + '</b></td></tr>' +
-    '<tr><td style="height:10px"></td><td></td></tr>' +
-    '<tr class="pl-sep"><td>毛利润</td><td>' + fmt(gross) + '</td></tr>' +
-    '<tr class="pl-sep"><td>纯利润</td><td>' + fmt(net) + '</td></tr>' +
-    '<tr><td>每人应分 (50/50)</td><td style="font-weight:600">' + fmt(half) + '</td></tr>' +
-    '<tr><td style="color:var(--text-muted);font-size:12px">利润率</td><td style="color:var(--text-muted);font-size:12px">' + rate.toFixed(1) + '%</td></tr>';
+                incomeData.push(income);
+                expenseData.push(expense);
+            }
 
-  document.getElementById('plTable').innerHTML = h;
-}
+            if (trendChart) {
+                trendChart.destroy();
+            }
 
-// ========== 导出 Excel ==========
-function exportCSV() {
-  var mA = filterMonth(data.incomeA);
-  var mB = filterMonth(data.incomeB);
-  var mE = filterMonth(data.expense);
-  var month = document.getElementById('curMonth').value;
-  var loanInfo = calcLoanInterest();
-  var totalBorrowed = loanInfo.totalBorrowed;
-  var totalRepaid = loanInfo.totalRepaid;
-  var monthInterest = loanInfo.monthInterest;
-  var range = monthRange(month);
-  var eStart = range.s, eEnd = range.e;
-  var todayStr = today();
-  var endDate = eEnd > todayStr ? todayStr : eEnd;
+            trendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: '收入',
+                            data: incomeData,
+                            backgroundColor: '#2d8a4e',
+                            borderRadius: 4
+                        },
+                        {
+                            label: '支出',
+                            data: expenseData,
+                            backgroundColor: '#c4501a',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { font: { family: 'Noto Sans SC', size: 12 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: { family: 'Noto Sans SC', size: 11 },
+                                callback: function(value) {
+                                    return '¥' + (value / 1000).toFixed(0) + 'k';
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: { font: { family: 'Noto Sans SC', size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
 
-  var incA = mA.reduce(function(s, r) { return s + r.amount; }, 0);
-  var incB = mB.reduce(function(s, r) { return s + r.amount; }, 0);
-  var totalInc = incA + incB;
-  var totalExp = mE.reduce(function(s, r) { return s + r.amount; }, 0) + monthInterest;
-  var cost = mE.filter(function(r) { return r.cat === 'cost'; }).reduce(function(s, r) { return s + r.amount; }, 0);
-  var ship = mE.filter(function(r) { return r.cat === 'ship'; }).reduce(function(s, r) { return s + r.amount; }, 0);
-  var gross = totalInc - cost - ship;
-  var net = totalInc - totalExp;
-  var half = net / 2;
-  var rate = totalInc > 0 ? (net / totalInc * 100) : 0;
-  var outstanding = Math.max(0, totalBorrowed - totalRepaid);
-  var totalAccruedInt = calcTotalAccruedInterest();
+        function renderLoans() {
+            var loanStats = document.getElementById('loanStats');
+            var loanList = document.getElementById('loanList');
 
-  var catTotals = {};
-  var catMap2 = { cost: '货款/成本', ship: '运费/快递', brush: '刷单', platform: '平台扣点/佣金', promo: '推广费', fine: '店铺罚款', pack: '包装耗材', return: '退货损失', labor: '人工/客服', interest: '贷款利息', other: '其他' };
-  Object.keys(catMap2).forEach(function(k) { catTotals[k] = 0; });
-  mE.forEach(function(r) { catTotals[r.cat] = (catTotals[r.cat] || 0) + r.amount; });
+            var totalPrincipal = 0;
+            var totalInterest = 0;
+            var totalRepaid = 0;
 
-  var td = 'border:1px solid #999;padding:6px 10px;';
-  var th = 'border:1px solid #999;padding:6px 10px;background:#444;color:#fff;font-weight:bold;';
-  var th2 = 'border:1px solid #999;padding:6px 10px;background:#666;color:#fff;font-weight:bold;';
-  var tdR = 'border:1px solid #999;padding:6px 10px;text-align:right;font-family:Consolas,monospace;';
-  var tdB = 'border:1px solid #999;padding:6px 10px;font-weight:bold;';
-  var tdBR = 'border:1px solid #999;padding:6px 10px;font-weight:bold;text-align:right;font-family:Consolas,monospace;';
-  var sep = 'border:1px solid #999;padding:3px;background:#f0f0f0;';
+            loans.forEach(function(loan) {
+                var loanRepayments = repayments.filter(function(r) { return r.loan_id === loan.id; });
+                var repaidPrincipal = loanRepayments
+                    .filter(function(r) { return r.type === 'principal' || r.type === 'both'; })
+                    .reduce(function(sum, r) { return sum + (parseFloat(r.amount) || 0); }, 0);
+                
+                var principal = parseFloat(loan.amount) || 0;
+                var days = Math.max(1, Math.floor((new Date() - new Date(loan.date)) / (1000 * 60 * 60 * 24)));
+                var rate = parseFloat(loan.interest_rate) || 17.64;
+                var interest = principal * (rate / 100) * (days / 365);
 
-  var html = '<html><head><meta charset="UTF-8"><style>td{mso-number-format:"\\@";font-size:12px;font-family:Microsoft YaHei;}</style></head><body><table cellpadding="0" cellspacing="0">';
+                totalPrincipal += principal;
+                totalInterest += interest;
+                totalRepaid += repaidPrincipal;
+            });
 
-  html += '<tr><td colspan="7" style="' + th + 'font-size:16px;text-align:center;">淘宝记账报表 \u00b7 ' + month + ' \u00b7 云端同步版</td></tr><tr><td colspan="7" style="' + sep + '"></td></tr>';
+            var totalOwed = totalPrincipal + totalInterest - totalRepaid;
 
-  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">一、本月总览</td></tr>';
-  html += '<tr><td style="' + tdB + '">内裤店收入</td><td style="' + tdBR + '">' + fmt(incA) + '</td><td style="' + tdB + '">衣服店收入</td><td style="' + tdBR + '">' + fmt(incB) + '</td><td style="' + tdB + '">总收入</td><td colspan="2" style="' + tdBR + '">' + fmt(totalInc) + '</td></tr>';
-  html += '<tr><td style="' + tdB + '">总支出</td><td style="' + tdBR + '">' + fmt(totalExp) + '</td><td style="' + tdB + '">其中贷款利息</td><td style="' + tdBR + '">' + fmt(monthInterest) + '</td><td style="' + tdB + '">利润率</td><td colspan="2" style="' + tdBR + '">' + rate.toFixed(2) + '%</td></tr>';
-  html += '<tr><td style="' + tdB + 'background:#e8f5ee;">毛利润</td><td style="' + tdBR + 'background:#e8f5ee;">' + fmt(gross) + '</td><td style="' + tdB + 'background:' + (net >= 0 ? '#e8f5ee' : '#fcecea') + ';">纯利润</td><td style="' + tdBR + 'background:' + (net >= 0 ? '#e8f5ee' : '#fcecea') + ';">' + fmt(net) + '</td><td style="' + tdB + '">每人应分</td><td colspan="2" style="' + tdBR + '">' + fmt(half) + '</td></tr>';
-  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+            loanStats.innerHTML = `
+                <div class="loan-stat">
+                    <div class="loan-stat-value">¥${formatMoney(totalPrincipal)}</div>
+                    <div class="loan-stat-label">借款本金</div>
+                </div>
+                <div class="loan-stat">
+                    <div class="loan-stat-value">¥${formatMoney(totalInterest)}</div>
+                    <div class="loan-stat-label">累计利息</div>
+                </div>
+                <div class="loan-stat">
+                    <div class="loan-stat-value">¥${formatMoney(totalRepaid)}</div>
+                    <div class="loan-stat-label">已还金额</div>
+                </div>
+                <div class="loan-stat">
+                    <div class="loan-stat-value">¥${formatMoney(totalOwed)}</div>
+                    <div class="loan-stat-label">待还金额</div>
+                </div>
+            `;
 
-  var tm = { sale: '销售', refund: '退款', other: '其他' };
-  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">二、内裤店收入 \u00b7 ' + mA.length + ' 笔 \u00b7 合计 ' + fmt(incA) + '</td></tr>';
-  html += '<tr><td style="' + th + '">序号</td><td style="' + th + '">日期</td><td style="' + th + '">订单/说明</td><td style="' + th + '">类型</td><td style="' + th + '">金额</td><td colspan="2" style="' + th + '">备注</td></tr>';
-  if (!mA.length) html += '<tr><td colspan="7" style="' + td + 'text-align:center;color:#999;">暂无</td></tr>';
-  else mA.forEach(function(r, i) { html += '<tr><td style="' + td + '">' + (i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">' + r.desc + '</td><td style="' + td + '">' + tm[r.type] + '</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td colspan="2" style="' + td + '">' + (r.remark || '') + '</td></tr>'; });
-  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+            if (loans.length === 0) {
+                loanList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💳</div>
+                        <p>暂无借款记录</p>
+                    </div>
+                `;
+                return;
+            }
 
-  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">三、衣服店收入 \u00b7 ' + mB.length + ' 笔 \u00b7 合计 ' + fmt(incB) + '</td></tr>';
-  html += '<tr><td style="' + th + '">序号</td><td style="' + th + '">日期</td><td style="' + th + '">订单/说明</td><td style="' + th + '">类型</td><td style="' + th + '">金额</td><td colspan="2" style="' + th + '">备注</td></tr>';
-  if (!mB.length) html += '<tr><td colspan="7" style="' + td + 'text-align:center;color:#999;">暂无</td></tr>';
-  else mB.forEach(function(r, i) { html += '<tr><td style="' + td + '">' + (i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">' + r.desc + '</td><td style="' + td + '">' + tm[r.type] + '</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td colspan="2" style="' + td + '">' + (r.remark || '') + '</td></tr>'; });
-  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+            loanList.innerHTML = loans.slice(0, 5).map(function(loan, index) {
+                var loanRepayments = repayments.filter(function(r) { return r.loan_id === loan.id; });
+                var repaid = loanRepayments.reduce(function(sum, r) { return sum + (parseFloat(r.amount) || 0); }, 0);
+                var principal = parseFloat(loan.amount) || 0;
+                var days = Math.max(1, Math.floor((new Date() - new Date(loan.date)) / (1000 * 60 * 60 * 24)));
+                var rate = parseFloat(loan.interest_rate) || 17.64;
+                var interest = principal * (rate / 100) * (days / 365);
+                var remaining = principal + interest - repaid;
 
-  var storeMap2 = { common: '公共', storeA: '内裤店', storeB: '衣服店' };
-  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">四、支出明细 \u00b7 ' + mE.length + ' 笔 \u00b7 合计 ' + fmt(mE.reduce(function(s, r) { return s + r.amount; }, 0)) + '</td></tr>';
-  html += '<tr><td style="' + th + '">序号</td><td style="' + th + '">日期</td><td style="' + th + '">用途</td><td style="' + th + '">类别</td><td style="' + th + '">归属</td><td style="' + th + '">金额</td><td style="' + th + '">备注</td></tr>';
-  if (!mE.length) html += '<tr><td colspan="7" style="' + td + 'text-align:center;color:#999;">暂无</td></tr>';
-  else mE.forEach(function(r, i) { html += '<tr><td style="' + td + '">' + (i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">' + r.desc + '</td><td style="' + td + '">' + (catMap2[r.cat] || r.cat) + '</td><td style="' + td + '">' + (storeMap2[r.store] || r.store) + '</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td style="' + td + '">' + (r.remark || '') + '</td></tr>'; });
-  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+                return `
+                    <div class="transaction-item" style="animation-delay: ${index * 0.05}s">
+                        <div class="transaction-icon expense">💳</div>
+                        <div class="transaction-info">
+                            <div class="transaction-category">${loan.borrower || '未知借款人'}</div>
+                            <div class="transaction-meta">
+                                <span>本金: ¥${formatMoney(principal)}</span>
+                                <span>利息: ¥${formatMoney(interest)}</span>
+                                <span>${loan.date}</span>
+                            </div>
+                        </div>
+                        <div class="transaction-amount expense">¥${formatMoney(remaining)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
 
-  html += '<tr><td colspan="7" style="' + th2 + 'font-size:13px;">五、贷款明细</td></tr>';
-  html += '<tr><td style="' + th + '">序号</td><td style="' + th + '">日期</td><td style="' + th + '">类型</td><td style="' + th + '">金额</td><td style="' + th + '">本月计息天数</td><td style="' + th + '">本月利息</td><td style="' + th + '">备注</td></tr>';
-  data.loans.forEach(function(r, i) {
-    var loanStart = r.date < eStart ? eStart : r.date;
-    var days = 0, int = 0;
-    if (loanStart <= endDate) { days = daysBetween(loanStart, endDate); int = r.amount * DAILY_RATE * days; }
-    html += '<tr><td style="' + td + '">' + (i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">借款</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td style="' + tdR + '">' + days + '</td><td style="' + tdR + '">' + int.toFixed(2) + '</td><td style="' + td + '">' + (r.remark || '') + '</td></tr>';
-  });
-  data.repayments.forEach(function(r, i) {
-    html += '<tr><td style="' + td + '">' + (data.loans.length + i + 1) + '</td><td style="' + td + '">' + r.date + '</td><td style="' + td + '">还款</td><td style="' + tdR + '">' + Number(r.amount).toFixed(2) + '</td><td style="' + td + '">-</td><td style="' + td + '">-</td><td style="' + td + '">' + (r.remark || '') + '</td></tr>';
-  });
-  html += '<tr><td style="' + tdB + '" colspan="3">累计借款</td><td style="' + tdBR + '">' + fmt(totalBorrowed) + '</td><td style="' + tdB + '">累计还款</td><td style="' + tdBR + '" colspan="2">' + fmt(totalRepaid) + '</td></tr>';
-  html += '<tr><td style="' + tdB + '" colspan="3">未还本金</td><td style="' + tdBR + '">' + fmt(outstanding) + '</td><td style="' + tdB + '">本月利息</td><td style="' + tdBR + '" colspan="2">' + fmt(monthInterest) + '</td></tr>';
-  html += '<tr><td colspan="7" style="' + sep + '"></td></tr>';
+        function renderTransactions() {
+            var list = document.getElementById('transactionList');
+            var monthFilter = document.getElementById('monthFilter').value;
+            var accountFilter = currentAccountFilter;
+            var searchText = document.getElementById('searchInput').value.toLowerCase();
 
-  html += '<tr><td colspan="7" style="padding:10px;font-size:11px;color:#999;text-align:center;">淘宝记账报表 \u00b7 云端同步版 \u00b7 生成时间：' + new Date().toLocaleString('zh-CN') + ' \u00b7 年利率17.64%单利</td></tr>';
-  html += '</table></body></html>';
+            var filtered = transactions.filter(function(t) {
+                if (monthFilter && !t.date.startsWith(monthFilter)) return false;
+                if (accountFilter && t.from_account !== accountFilter && t.to_account !== accountFilter) return false;
+                if (searchText && t.note && !t.note.toLowerCase().includes(searchText)) return false;
+                return true;
+            });
 
-  var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '淘宝记账报表_' + month + '.xls';
-  a.click();
-}
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <p>暂无交易记录</p>
+                    </div>
+                `;
+                return;
+            }
 
-// ========== 初始化 ==========
-function init() {
-  document.getElementById('curMonth').value = new Date().toISOString().slice(0, 7);
-  var t = today();
-  ['dA', 'dB', 'dE', 'loanDate', 'repayDate'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.value = t;
-  });
-  loadFromSupabase();
-  setupRealtime();
-}
+            list.innerHTML = filtered.slice(0, 50).map(function(t, index) {
+                var cat = getCategory(t.category, t.type);
+                var fromAcc = accounts.find(function(a) { return a.id === t.from_account; });
+                var toAcc = accounts.find(function(a) { return a.id === t.to_account; });
+                
+                var accountText = '';
+                if (t.type === 'transfer' && fromAcc && toAcc) {
+                    accountText = (fromAcc.name || fromAcc.type) + ' → ' + (toAcc.name || toAcc.type);
+                } else if (fromAcc) {
+                    accountText = fromAcc.name || fromAcc.type;
+                }
 
-// init() 已在 waitForSupabase 回调中调用，此处不再重复调用
-</script>
+                var amountClass = t.type === 'income' ? 'income' : t.type === 'expense' ? 'expense' : '';
+                var amountPrefix = t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '';
+
+                return `
+                    <div class="transaction-item" style="animation-delay: ${index * 0.03}s">
+                        <div class="transaction-icon ${t.type}">${cat.icon}</div>
+                        <div class="transaction-info">
+                            <div class="transaction-category">${cat.name}</div>
+                            <div class="transaction-meta">
+                                <span>${accountText}</span>
+                                <span>${t.date}</span>
+                                ${t.note ? '<span>' + t.note + '</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="transaction-amount ${amountClass}">${amountPrefix}¥${formatMoney(t.amount)}</div>
+                        <div class="transaction-actions">
+                            <button class="btn btn-danger btn-small" onclick="deleteTransaction('${t.id}')">删除</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // Helper Functions
+        // ==========================================
+        function formatMoney(amount) {
+            var num = parseFloat(amount) || 0;
+            return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function getCategory(catId, type) {
+            var cats = type === 'income' ? INCOME_CATEGORIES : 
+                      type === 'transfer' ? TRANSFER_CATEGORIES : 
+                      EXPENSE_CATEGORIES;
+            return cats.find(function(c) { return c.id === catId; }) || 
+                   { name: '其他', icon: '📦', color: '#95a5a6' };
+        }
+
+        function updateSyncStatus(status) {
+            var el = document.getElementById('syncStatus');
+            el.className = 'sync-status ' + status;
+            
+            if (status === 'syncing') {
+                el.textContent = '同步中...';
+            } else if (status === 'synced') {
+                el.textContent = '已同步';
+            } else if (status === 'error') {
+                el.textContent = '同步失败';
+            }
+        }
+
+        function showToast(message, type) {
+            var container = document.getElementById('toastContainer');
+            var icons = { success: '✓', error: '✗', warning: '⚠' };
+            
+            var toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || 'ℹ'}</span>
+                <span class="toast-message">${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(function() {
+                toast.remove();
+            }, 4000);
+        }
+
+        function setupMonthFilter() {
+            var select = document.getElementById('monthFilter');
+            var currentDate = new Date();
+            
+            for (var i = 0; i < 12; i++) {
+                var d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                var value = d.toISOString().slice(0, 7);
+                var label = d.getFullYear() + '年' + (d.getMonth() + 1) + '月';
+                
+                var option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                select.appendChild(option);
+            }
+        }
+
+        function updateAccountFilter() {
+            var select = document.getElementById('accountFilter');
+            select.innerHTML = '<option value="">所有账户</option>';
+            
+            accounts.forEach(function(account) {
+                var option = document.createElement('option');
+                option.value = account.id;
+                option.textContent = account.name || account.type;
+                select.appendChild(option);
+            });
+        }
+
+        // ==========================================
+        // Event Handlers
+        // ==========================================
+        function selectAccount(accountId) {
+            if (currentAccountFilter === accountId) {
+                currentAccountFilter = '';
+            } else {
+                currentAccountFilter = accountId;
+            }
+            renderAccounts();
+            renderTransactions();
+        }
+
+        function filterByMonth() {
+            renderTransactions();
+        }
+
+        function filterByAccount() {
+            currentAccountFilter = document.getElementById('accountFilter').value;
+            renderAccounts();
+            renderTransactions();
+        }
+
+        function searchTransactions() {
+            renderTransactions();
+        }
+
+        function switchTransactionType(type) {
+            currentTransactionType = type;
+            selectedCategory = null;
+            
+            // Update tabs
+            document.querySelectorAll('#transactionTabs .tab').forEach(function(tab) {
+                tab.classList.toggle('active', tab.dataset.type === type);
+            });
+
+            // Update labels and visibility
+            var fromLabel = document.getElementById('fromAccountLabel');
+            var toGroup = document.getElementById('toAccountGroup');
+            
+            if (type === 'income') {
+                fromLabel.textContent = '存入账户';
+                toGroup.style.display = 'none';
+            } else if (type === 'expense') {
+                fromLabel.textContent = '支出账户';
+                toGroup.style.display = 'none';
+            } else {
+                fromLabel.textContent = '转出账户';
+                toGroup.style.display = 'block';
+            }
+
+            renderCategoryGrid();
+        }
+
+        function selectCategory(catId) {
+            selectedCategory = catId;
+            renderCategoryGrid();
+        }
+
+        // ==========================================
+        // Modal Functions
+        // ==========================================
+        function openTransactionModal(type) {
+            currentTransactionType = type;
+            selectedCategory = null;
+            switchTransactionType(type);
+            
+            // Populate account selects
+            var fromSelect = document.getElementById('fromAccount');
+            var toSelect = document.getElementById('toAccount');
+            
+            var options = accounts.map(function(a) {
+                return `<option value="${a.id}">${a.name || a.type}</option>`;
+            }).join('');
+            
+            fromSelect.innerHTML = options;
+            toSelect.innerHTML = options;
+
+            // Set title
+            var titles = { income: '记收入', expense: '记支出', transfer: '转账' };
+            document.getElementById('transactionModalTitle').textContent = titles[type];
+
+            // Reset form
+            document.getElementById('transactionAmount').value = '';
+            document.getElementById('transactionNote').value = '';
+            document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+
+            document.getElementById('transactionModal').classList.add('active');
+        }
+
+        function openBudgetModal() {
+            var currentMonth = new Date().toISOString().slice(0, 7);
+            var budget = budgets.find(function(b) {
+                return b.period === 'monthly' && b.month === currentMonth;
+            });
+            
+            document.getElementById('totalBudget').value = budget ? budget.amount : '';
+            document.getElementById('budgetModal').classList.add('active');
+        }
+
+        function openLoanModal() {
+            document.getElementById('loanBorrower').value = '';
+            document.getElementById('loanAmount').value = '';
+            document.getElementById('loanNote').value = '';
+            document.getElementById('loanDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('loanModal').classList.add('active');
+        }
+
+        function openRepaymentModal() {
+            var select = document.getElementById('repaymentLoan');
+            select.innerHTML = loans.map(function(l) {
+                return `<option value="${l.id}">${l.borrower || '未知'} - ¥${formatMoney(l.amount)}</option>`;
+            }).join('');
+            
+            document.getElementById('repaymentAmount').value = '';
+            document.getElementById('repaymentDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('repaymentModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // ==========================================
+        // Save Functions
+        // ==========================================
+        async function saveTransaction() {
+            var amount = parseFloat(document.getElementById('transactionAmount').value);
+            var fromAccount = document.getElementById('fromAccount').value;
+            var toAccount = document.getElementById('toAccount').value;
+            var date = document.getElementById('transactionDate').value;
+            var note = document.getElementById('transactionNote').value;
+
+            if (!amount || amount <= 0) {
+                showToast('请输入有效金额', 'error');
+                return;
+            }
+
+            if (!selectedCategory && currentTransactionType !== 'transfer') {
+                showToast('请选择分类', 'error');
+                return;
+            }
+
+            if (!fromAccount) {
+                showToast('请选择账户', 'error');
+                return;
+            }
+
+            if (currentTransactionType === 'transfer' && !toAccount) {
+                showToast('请选择转入账户', 'error');
+                return;
+            }
+
+            updateSyncStatus('syncing');
+
+            try {
+                var transaction = {
+                    type: currentTransactionType,
+                    amount: amount,
+                    category: selectedCategory || 'transfer',
+                    from_account: fromAccount,
+                    to_account: currentTransactionType === 'transfer' ? toAccount : null,
+                    date: date,
+                    note: note,
+                    created_at: new Date().toISOString()
+                };
+
+                var result = await _sb.from('transactions').insert(transaction).select();
+                if (result.error) throw result.error;
+
+                // Update account balances
+                await updateAccountBalance(fromAccount, currentTransactionType === 'income' ? amount : -amount);
+                if (currentTransactionType === 'transfer') {
+                    await updateAccountBalance(toAccount, amount);
+                }
+
+                await loadTransactions();
+                await loadAccounts();
+                renderAll();
+                closeModal('transactionModal');
+                updateSyncStatus('synced');
+                showToast('交易已保存', 'success');
+            } catch (error) {
+                console.error('Error saving transaction:', error);
+                updateSyncStatus('error');
+                showToast('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        async function updateAccountBalance(accountId, delta) {
+            var account = accounts.find(function(a) { return a.id === accountId; });
+            if (!account) return;
+
+            var newBalance = parseFloat(account.balance || 0) + delta;
+            var result = await _sb.from('accounts')
+                .update({ balance: newBalance, updated_at: new Date().toISOString() })
+                .eq('id', accountId);
+            
+            if (result.error) throw result.error;
+        }
+
+        async function saveBudget() {
+            var amount = parseFloat(document.getElementById('totalBudget').value);
+            var period = document.getElementById('budgetPeriod').value;
+            var currentMonth = new Date().toISOString().slice(0, 7);
+
+            if (!amount || amount <= 0) {
+                showToast('请输入有效预算金额', 'error');
+                return;
+            }
+
+            updateSyncStatus('syncing');
+
+            try {
+                var existing = budgets.find(function(b) {
+                    return b.period === period && b.month === currentMonth;
+                });
+
+                var budget = {
+                    amount: amount,
+                    period: period,
+                    month: currentMonth,
+                    updated_at: new Date().toISOString()
+                };
+
+                var result;
+                if (existing) {
+                    result = await _sb.from('budgets').update(budget).eq('id', existing.id);
+                } else {
+                    budget.created_at = new Date().toISOString();
+                    result = await _sb.from('budgets').insert(budget);
+                }
+
+                if (result.error) throw result.error;
+
+                await loadBudgets();
+                renderBudget();
+                closeModal('budgetModal');
+                updateSyncStatus('synced');
+                showToast('预算已保存', 'success');
+            } catch (error) {
+                console.error('Error saving budget:', error);
+                updateSyncStatus('error');
+                showToast('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        async function saveLoan() {
+            var borrower = document.getElementById('loanBorrower').value.trim();
+            var amount = parseFloat(document.getElementById('loanAmount').value);
+            var date = document.getElementById('loanDate').value;
+            var rate = parseFloat(document.getElementById('loanRate').value);
+            var note = document.getElementById('loanNote').value.trim();
+
+            if (!borrower) {
+                showToast('请输入借款人姓名', 'error');
+                return;
+            }
+
+            if (!amount || amount <= 0) {
+                showToast('请输入有效金额', 'error');
+                return;
+            }
+
+            updateSyncStatus('syncing');
+
+            try {
+                var loan = {
+                    borrower: borrower,
+                    amount: amount,
+                    date: date,
+                    interest_rate: rate || 17.64,
+                    note: note,
+                    status: 'active',
+                    created_at: new Date().toISOString()
+                };
+
+                var result = await _sb.from('loans').insert(loan).select();
+                if (result.error) throw result.error;
+
+                await loadLoans();
+                renderLoans();
+                closeModal('loanModal');
+                updateSyncStatus('synced');
+                showToast('借款已记录', 'success');
+            } catch (error) {
+                console.error('Error saving loan:', error);
+                updateSyncStatus('error');
+                showToast('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        async function saveRepayment() {
+            var loanId = document.getElementById('repaymentLoan').value;
+            var amount = parseFloat(document.getElementById('repaymentAmount').value);
+            var date = document.getElementById('repaymentDate').value;
+            var type = document.getElementById('repaymentType').value;
+
+            if (!loanId) {
+                showToast('请选择借款', 'error');
+                return;
+            }
+
+            if (!amount || amount <= 0) {
+                showToast('请输入有效金额', 'error');
+                return;
+            }
+
+            updateSyncStatus('syncing');
+
+            try {
+                var repayment = {
+                    loan_id: loanId,
+                    amount: amount,
+                    date: date,
+                    type: type,
+                    created_at: new Date().toISOString()
+                };
+
+                var result = await _sb.from('repayments').insert(repayment);
+                if (result.error) throw result.error;
+
+                await loadRepayments();
+                renderLoans();
+                closeModal('repaymentModal');
+                updateSyncStatus('synced');
+                showToast('还款已记录', 'success');
+            } catch (error) {
+                console.error('Error saving repayment:', error);
+                updateSyncStatus('error');
+                showToast('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteTransaction(id) {
+            if (!confirm('确定要删除这条记录吗？')) return;
+
+            updateSyncStatus('syncing');
+
+            try {
+                var transaction = transactions.find(function(t) { return t.id === id; });
+                if (transaction) {
+                    // Revert account balance
+                    await updateAccountBalance(transaction.from_account, 
+                        transaction.type === 'income' ? -transaction.amount : transaction.amount);
+                    if (transaction.type === 'transfer' && transaction.to_account) {
+                        await updateAccountBalance(transaction.to_account, -transaction.amount);
+                    }
+                }
+
+                var result = await _sb.from('transactions').delete().eq('id', id);
+                if (result.error) throw result.error;
+
+                await loadTransactions();
+                await loadAccounts();
+                renderAll();
+                updateSyncStatus('synced');
+                showToast('记录已删除', 'success');
+            } catch (error) {
+                console.error('Error deleting transaction:', error);
+                updateSyncStatus('error');
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // ==========================================
+        // Export Functions
+        // ==========================================
+        function exportToExcel() {
+            if (transactions.length === 0) {
+                showToast('没有数据可导出', 'warning');
+                return;
+            }
+
+            var data = transactions.map(function(t) {
+                var cat = getCategory(t.category, t.type);
+                var fromAcc = accounts.find(function(a) { return a.id === t.from_account; });
+                return {
+                    '日期': t.date,
+                    '类型': t.type === 'income' ? '收入' : t.type === 'expense' ? '支出' : '转账',
+                    '分类': cat.name,
+                    '账户': fromAcc ? (fromAcc.name || fromAcc.type) : '',
+                    '金额': parseFloat(t.amount) || 0,
+                    '备注': t.note || ''
+                };
+            });
+
+            var ws = XLSX.utils.json_to_sheet(data);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '收支明细');
+            
+            var filename = '个人记账_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+            XLSX.writeFile(wb, filename);
+            
+            showToast('Excel已导出', 'success');
+        }
+
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
