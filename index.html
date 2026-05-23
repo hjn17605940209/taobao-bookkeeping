@@ -698,7 +698,15 @@ var defaultAccounts = [
 
 // ========== SUPABASE INIT ==========
 function waitForSupabase(cb){
-  if(typeof supabase !== 'undefined' && supabase.createClient){
+  // 检查 window.supabase（UMD 库挂载位置）
+  if(typeof window.supabase !== 'undefined' && window.supabase.createClient){
+    _sb = window.supabase.createClient(
+      'https://vjildthiuxhoukakvtui.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg'
+    );
+    setSyncStatus('synced');
+    cb();
+  } else if(typeof supabase !== 'undefined' && supabase.createClient){
     _sb = supabase.createClient(
       'https://vjildthiuxhoukakvtui.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg'
@@ -707,7 +715,7 @@ function waitForSupabase(cb){
     cb();
   } else {
     setSyncStatus('connecting');
-    setTimeout(function(){ waitForSupabase(cb); }, 500);
+    setTimeout(function(){ waitForSupabase(cb); }, 200);
   }
 }
 
@@ -1458,20 +1466,23 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('monthLabel').textContent = currentYear + '年' + currentMonth + '月';
   document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
 
-  // Show skeleton loading
-  showSkeletons();
+  // 立即触发卡片入场动画
+  setTimeout(function(){
+    animateCards();
+  }, 100);
 
+  // 初始化 Supabase
   waitForSupabase(function(){
     loadData();
   });
 });
 
-function showSkeletons(){
-  // Brief skeleton display then reveal
+// 页面加载完成后再次触发动画
+window.addEventListener('load', function(){
   setTimeout(function(){
     animateCards();
-  }, 200);
-}
+  }, 300);
+});
 </script>
 </body>
 </html>
