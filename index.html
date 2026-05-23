@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>个人记账</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
 <style>
 /* ========== CSS Reset & Variables ========== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -103,6 +104,11 @@ button:disabled { pointer-events: none; }
   position: relative; z-index: 1;
   max-width: 520px; margin: 0 auto;
   padding: 20px 16px 100px;
+  animation: pageBreathe 8s ease-in-out infinite;
+}
+@keyframes pageBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.003); }
 }
 
 /* ========== Header ========== */
@@ -116,6 +122,11 @@ button:disabled { pointer-events: none; }
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
+  display: flex; align-items: center; gap: 8px;
+}
+.header-title i {
+  -webkit-text-fill-color: var(--primary);
+  font-size: 1.4rem;
 }
 .month-nav {
   display: flex; align-items: center; gap: 10px;
@@ -173,7 +184,9 @@ button:disabled { pointer-events: none; }
   font-size: 0.7rem; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: 0.5px;
   margin-bottom: 6px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
 }
+.summary-label i { font-size: 0.85rem; }
 .summary-amount {
   font-family: 'JetBrains Mono', monospace;
   font-size: 1.05rem; font-weight: 700;
@@ -709,6 +722,7 @@ button:disabled { pointer-events: none; }
   color: var(--text-secondary); font-size: 0.72rem;
   font-family: 'Inter', sans-serif; font-weight: 500;
   cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
 }
 .btn-export:hover { border-color: var(--border-hover); color: var(--text); background: rgba(255,255,255,0.03); }
 .btn-export:active { transform: scale(0.93); }
@@ -760,6 +774,61 @@ button:disabled { pointer-events: none; }
   50% { transform: scale(1.2); }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ========== GLOBAL ANIMATION SYSTEM ========== */
+
+/* A. Global Click Pulse */
+.global-pulse {
+  position: fixed; border-radius: 50%; pointer-events: none; z-index: 9999;
+  border: 2px solid rgba(59,130,246,0.3);
+  transform: scale(0); opacity: 1;
+  animation: globalPulse 0.8s ease-out forwards;
+}
+@keyframes globalPulse {
+  0% { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* D. Data Change Wave */
+@keyframes dataWave {
+  0% { transform: scale(0.98); opacity: 0.7; }
+  50% { transform: scale(1.005); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* G. Global Transition Flash */
+.global-transition {
+  position: fixed; inset: 0; z-index: 9998; pointer-events: none;
+  background: radial-gradient(circle at var(--flash-x, 50%) var(--flash-y, 50%), rgba(59,130,246,0.08) 0%, transparent 60%);
+  animation: globalFlash 0.5s ease-out forwards;
+}
+@keyframes globalFlash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* E. Ambient Particles */
+.particle-layer {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(59,130,246,0.15);
+  animation: particleFloat linear infinite;
+}
+@keyframes particleFloat {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-100vh) translateX(30px); opacity: 0; }
+}
+
+/* C. Scroll-driven section reveal */
+.section.scrolled-reveal {
+  animation: fadeSlideUp 0.6s var(--spring-smooth) both;
+}
 </style>
 </head>
 <body>
@@ -775,6 +844,9 @@ button:disabled { pointer-events: none; }
   <div class="blob blob-3"></div>
 </div>
 
+<!-- Ambient Particle Layer -->
+<div class="particle-layer" id="particleLayer"></div>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -783,7 +855,7 @@ button:disabled { pointer-events: none; }
 
   <!-- Header -->
   <div class="header">
-    <div class="header-title">&#x1F4B0; 个人记账</div>
+    <div class="header-title"><i class="ri-funds-line"></i> 个人记账</div>
     <div class="month-nav">
       <button onclick="changeMonth(-1)">&#9664;</button>
       <span id="monthLabel">加载中...</span>
@@ -794,15 +866,15 @@ button:disabled { pointer-events: none; }
   <!-- Summary Cards -->
   <div class="summary-row">
     <div class="summary-card">
-      <div class="summary-label">本月收入</div>
+      <div class="summary-label"><i class="ri-arrow-up-circle-fill" style="color:var(--success)"></i> 本月收入</div>
       <div class="summary-amount income mono" id="totalIncome">¥0.00</div>
     </div>
     <div class="summary-card">
-      <div class="summary-label">本月支出</div>
+      <div class="summary-label"><i class="ri-arrow-down-circle-fill" style="color:var(--danger)"></i> 本月支出</div>
       <div class="summary-amount expense mono" id="totalExpense">¥0.00</div>
     </div>
     <div class="summary-card">
-      <div class="summary-label">本月结余</div>
+      <div class="summary-label"><i class="ri-pie-chart-2-fill" style="color:var(--primary)"></i> 本月结余</div>
       <div class="summary-amount balance mono" id="totalBalance">¥0.00</div>
     </div>
   </div>
@@ -810,13 +882,13 @@ button:disabled { pointer-events: none; }
   <!-- Quick Actions -->
   <div class="quick-actions">
     <button class="btn-add primary" onclick="openAddModal('expense')">
-      <span class="icon">&#x1F4B0;</span> 记一笔
+      <i class="ri-add-circle-line icon"></i> 记一笔
     </button>
     <button class="btn-add secondary" onclick="openBudgetModal()">
-      <span class="icon">&#x1F4CA;</span> 预算
+      <i class="ri-bar-chart-box-line icon"></i> 预算
     </button>
     <button class="btn-add secondary" onclick="openLoanModal()">
-      <span class="icon">&#x1F3E6;</span> 贷款
+      <i class="ri-bank-line icon"></i> 贷款
     </button>
   </div>
 
@@ -852,7 +924,7 @@ button:disabled { pointer-events: none; }
   <div class="section">
     <div class="section-header">
       <div class="section-title">最近交易</div>
-      <button class="btn-export" onclick="exportExcel()">&#x1F4E5; 导出Excel</button>
+      <button class="btn-export" onclick="exportExcel()"><i class="ri-download-2-line"></i> 导出</button>
     </div>
     <div class="tx-list" id="txList">
       <div class="tx-empty">加载中...</div>
@@ -924,7 +996,7 @@ button:disabled { pointer-events: none; }
           <label class="form-label">转出账户</label>
           <div class="account-select-grid" id="fromAccGrid"></div>
         </div>
-        <div class="transfer-arrow">&#x2B07;</div>
+        <div class="transfer-arrow"><i class="ri-arrow-down-line"></i></div>
         <div class="form-group">
           <label class="form-label">转入账户</label>
           <div class="account-select-grid" id="toAccGrid"></div>
@@ -1053,6 +1125,18 @@ button:disabled { pointer-events: none; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 <script>
 // ============================================================
+//  Icon Helper: render icon string as HTML
+// ============================================================
+function renderIcon(iconStr, extraClass) {
+  if (!iconStr) return '';
+  extraClass = extraClass || '';
+  if (iconStr.indexOf('ri-') === 0) {
+    return '<i class="' + iconStr + '" ' + extraClass + '></i>';
+  }
+  return escHtml(iconStr);
+}
+
+// ============================================================
 //  全局状态
 // ============================================================
 var _sb = null;
@@ -1076,7 +1160,23 @@ var pieChart = null;
 var barChart = null;
 
 // ============================================================
-//  Ripple Effect
+//  GLOBAL ANIMATION: A. Global Click Pulse
+// ============================================================
+document.addEventListener('click', function(e) {
+  // Create global pulse
+  var pulse = document.createElement('div');
+  pulse.className = 'global-pulse';
+  var size = 800;
+  pulse.style.width = size + 'px';
+  pulse.style.height = size + 'px';
+  pulse.style.left = (e.clientX - size / 2) + 'px';
+  pulse.style.top = (e.clientY - size / 2) + 'px';
+  document.body.appendChild(pulse);
+  setTimeout(function() { if (pulse.parentNode) pulse.parentNode.removeChild(pulse); }, 800);
+});
+
+// ============================================================
+//  Ripple Effect (for buttons)
 // ============================================================
 document.addEventListener('click', function(e) {
   var target = e.target.closest('button, .btn-add, .btn-submit, .btn-export, .section-action, .loan-btn');
@@ -1093,6 +1193,101 @@ document.addEventListener('click', function(e) {
   target.appendChild(ripple);
   setTimeout(function() { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 600);
 });
+
+// ============================================================
+//  GLOBAL ANIMATION: E. Ambient Particle System
+// ============================================================
+(function initParticles() {
+  var layer = document.getElementById('particleLayer');
+  var count = 18;
+  for (var i = 0; i < count; i++) {
+    var p = document.createElement('div');
+    p.className = 'particle';
+    var size = 2 + Math.random() * 3;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.bottom = -(Math.random() * 20) + '%';
+    p.style.animationDuration = (12 + Math.random() * 18) + 's';
+    p.style.animationDelay = (Math.random() * 15) + 's';
+    p.style.opacity = 0.08 + Math.random() * 0.15;
+    layer.appendChild(p);
+  }
+})();
+
+// ============================================================
+//  GLOBAL ANIMATION: F. Magnetic Hover Effect
+// ============================================================
+(function initMagneticHover() {
+  function attachMagnetic(selector) {
+    document.addEventListener('mousemove', function(e) {
+      var els = document.querySelectorAll(selector);
+      els.forEach(function(el) {
+        var rect = el.getBoundingClientRect();
+        var centerX = rect.left + rect.width / 2;
+        var centerY = rect.top + rect.height / 2;
+        var offsetX = e.clientX - centerX;
+        var offsetY = e.clientY - centerY;
+        var dist = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+        if (dist < 200) {
+          el.style.transform = 'translate(' + (offsetX * 0.1) + 'px, ' + (offsetY * 0.1) + 'px)';
+        }
+      });
+    });
+    document.addEventListener('mouseleave', function() {
+      var els = document.querySelectorAll(selector);
+      els.forEach(function(el) {
+        el.style.transform = '';
+      });
+    });
+    // Reset on mouse leave from individual elements
+    document.addEventListener('mouseover', function(e) {
+      var els = document.querySelectorAll(selector);
+      els.forEach(function(el) {
+        if (!el.contains(e.target) && el !== e.target) {
+          el.style.transform = '';
+        }
+      });
+    });
+  }
+  attachMagnetic('.summary-card');
+  attachMagnetic('.chart-card');
+})();
+
+// ============================================================
+//  GLOBAL ANIMATION: C. Scroll-Driven Parallax Sections
+// ============================================================
+(function initScrollReveal() {
+  function checkSections() {
+    var sections = document.querySelectorAll('.section');
+    sections.forEach(function(section, i) {
+      var rect = section.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 0.9 && !section.classList.contains('scrolled-reveal')) {
+        section.classList.add('scrolled-reveal');
+        section.style.animationDelay = (i * 0.05) + 's';
+      }
+    });
+  }
+  window.addEventListener('scroll', checkSections, { passive: true });
+  // Initial check
+  setTimeout(checkSections, 100);
+})();
+
+// ============================================================
+//  GLOBAL ANIMATION: G. Global Transition Flash
+// ============================================================
+function triggerGlobalFlash(x, y) {
+  var flash = document.createElement('div');
+  flash.className = 'global-transition';
+  if (x !== undefined && y !== undefined) {
+    var px = (x / window.innerWidth * 100).toFixed(1) + '%';
+    var py = (y / window.innerHeight * 100).toFixed(1) + '%';
+    flash.style.setProperty('--flash-x', px);
+    flash.style.setProperty('--flash-y', py);
+  }
+  document.body.appendChild(flash);
+  setTimeout(function() { if (flash.parentNode) flash.parentNode.removeChild(flash); }, 500);
+}
 
 // ============================================================
 //  Animated Number Counter
@@ -1227,29 +1422,29 @@ async function loadData() {
 //  默认数据
 // ============================================================
 var defaultCategories = [
-  { name: '餐饮', type: 'expense', icon: '🍜', color: '#f97316', sort_order: 1 },
-  { name: '交通', type: 'expense', icon: '🚗', color: '#3b82f6', sort_order: 2 },
-  { name: '购物', type: 'expense', icon: '🛒', color: '#ec4899', sort_order: 3 },
-  { name: '娱乐', type: 'expense', icon: '🎮', color: '#8b5cf6', sort_order: 4 },
-  { name: '住房', type: 'expense', icon: '🏠', color: '#14b8a6', sort_order: 5 },
-  { name: '医疗', type: 'expense', icon: '💊', color: '#ef4444', sort_order: 6 },
-  { name: '教育', type: 'expense', icon: '📚', color: '#6366f1', sort_order: 7 },
-  { name: '通讯', type: 'expense', icon: '📱', color: '#06b6d4', sort_order: 8 },
-  { name: '日用', type: 'expense', icon: '🧴', color: '#84cc16', sort_order: 9 },
-  { name: '其他', type: 'expense', icon: '📦', color: '#71717a', sort_order: 10 },
-  { name: '工资', type: 'income', icon: '💰', color: '#10b981', sort_order: 11 },
-  { name: '奖金', type: 'income', icon: '🎁', color: '#f59e0b', sort_order: 12 },
-  { name: '投资', type: 'income', icon: '📈', color: '#3b82f6', sort_order: 13 },
-  { name: '兼职', type: 'income', icon: '💼', color: '#8b5cf6', sort_order: 14 },
-  { name: '其他收入', type: 'income', icon: '💵', color: '#71717a', sort_order: 15 }
+  { name: '餐饮', type: 'expense', icon: 'ri-restaurant-line', color: '#f97316', sort_order: 1 },
+  { name: '交通', type: 'expense', icon: 'ri-car-line', color: '#3b82f6', sort_order: 2 },
+  { name: '购物', type: 'expense', icon: 'ri-shopping-bag-line', color: '#ec4899', sort_order: 3 },
+  { name: '娱乐', type: 'expense', icon: 'ri-gamepad-line', color: '#8b5cf6', sort_order: 4 },
+  { name: '住房', type: 'expense', icon: 'ri-home-4-line', color: '#14b8a6', sort_order: 5 },
+  { name: '医疗', type: 'expense', icon: 'ri-heart-pulse-line', color: '#ef4444', sort_order: 6 },
+  { name: '教育', type: 'expense', icon: 'ri-book-open-line', color: '#6366f1', sort_order: 7 },
+  { name: '通讯', type: 'expense', icon: 'ri-smartphone-line', color: '#06b6d4', sort_order: 8 },
+  { name: '日用', type: 'expense', icon: 'ri-shopping-basket-line', color: '#84cc16', sort_order: 9 },
+  { name: '其他', type: 'expense', icon: 'ri-inbox-line', color: '#71717a', sort_order: 10 },
+  { name: '工资', type: 'income', icon: 'ri-wallet-3-line', color: '#10b981', sort_order: 11 },
+  { name: '奖金', type: 'income', icon: 'ri-gift-line', color: '#f59e0b', sort_order: 12 },
+  { name: '投资', type: 'income', icon: 'ri-stock-line', color: '#3b82f6', sort_order: 13 },
+  { name: '兼职', type: 'income', icon: 'ri-briefcase-line', color: '#8b5cf6', sort_order: 14 },
+  { name: '其他收入', type: 'income', icon: 'ri-coins-line', color: '#71717a', sort_order: 15 }
 ];
 
 var defaultAccounts = [
-  { name: '现金', type: 'cash', icon: '💵', color: '#10b981', balance: 0, sort_order: 1 },
-  { name: '银行卡', type: 'bank', icon: '💳', color: '#3b82f6', balance: 0, sort_order: 2 },
-  { name: '支付宝', type: 'ewallet', icon: '🔵', color: '#3b82f6', balance: 0, sort_order: 3 },
-  { name: '微信', type: 'ewallet', icon: '🟢', color: '#10b981', balance: 0, sort_order: 4 },
-  { name: '信用卡', type: 'credit', icon: '💰', color: '#f59e0b', balance: 0, sort_order: 5 }
+  { name: '现金', type: 'cash', icon: 'ri-money-cny-circle-line', color: '#10b981', balance: 0, sort_order: 1 },
+  { name: '银行卡', type: 'bank', icon: 'ri-bank-card-line', color: '#3b82f6', balance: 0, sort_order: 2 },
+  { name: '支付宝', type: 'ewallet', icon: 'ri-alipay-line', color: '#3b82f6', balance: 0, sort_order: 3 },
+  { name: '微信', type: 'ewallet', icon: 'ri-wechat-pay-line', color: '#10b981', balance: 0, sort_order: 4 },
+  { name: '信用卡', type: 'credit', icon: 'ri-credit-card-2-line', color: '#f59e0b', balance: 0, sort_order: 5 }
 ];
 
 async function insertDefaultCategories() {
@@ -1292,6 +1487,18 @@ function loadDemoData() {
 }
 
 // ============================================================
+//  GLOBAL ANIMATION: D. Data Change Wave
+// ============================================================
+function triggerDataWave() {
+  var sections = document.querySelectorAll('.section, .summary-row, .quick-actions');
+  sections.forEach(function(el, i) {
+    el.style.animation = 'none';
+    el.offsetHeight; // trigger reflow
+    el.style.animation = 'dataWave 0.6s cubic-bezier(0.22, 1, 0.36, 1) ' + (i * 0.05) + 's both';
+  });
+}
+
+// ============================================================
 //  渲染
 // ============================================================
 function renderAll() {
@@ -1302,6 +1509,8 @@ function renderAll() {
   renderCharts();
   renderBudgets();
   renderLoans();
+  // Trigger data wave after render
+  triggerDataWave();
 }
 
 function updateMonthLabel() {
@@ -1348,7 +1557,7 @@ function renderAccounts() {
   allAccounts.forEach(function(acc, idx) {
     var bal = acc.balance || 0;
     html += '<div class="account-chip" style="animation-delay:' + (idx * 0.06) + 's">'
-      + '<span class="acc-icon">' + escHtml(acc.icon || '') + '</span>'
+      + '<span class="acc-icon">' + renderIcon(acc.icon) + '</span>'
       + '<span>' + escHtml(acc.name) + '</span>'
       + '<span class="acc-balance">¥' + formatNum(bal) + '</span>'
       + '</div>';
@@ -1371,15 +1580,16 @@ function renderTransactions() {
   show.forEach(function(tx, idx) {
     var cat = findCategory(tx.category_id);
     var acc = findAccount(tx.account_id);
-    var icon = cat ? cat.icon : '📦';
+    var icon = cat ? cat.icon : 'ri-inbox-line';
     var catName = cat ? cat.name : (tx.type === 'transfer' ? '转账' : '未知');
     var bgColor = cat ? cat.color + '18' : '#24242a';
     var typeClass = tx.type || 'expense';
     var sign = typeClass === 'income' ? '+' : (typeClass === 'transfer' ? '' : '-');
     var amt = parseFloat(tx.amount) || 0;
+    var iconHtml = renderIcon(icon, 'style="font-size:1.1rem"');
 
     html += '<div class="tx-item" style="animation-delay:' + (idx * 0.04) + 's">'
-      + '<div class="tx-icon" style="background:' + bgColor + '">' + icon + '</div>'
+      + '<div class="tx-icon" style="background:' + bgColor + '">' + iconHtml + '</div>'
       + '<div class="tx-info">'
       + '<div class="tx-cat">' + escHtml(catName) + (acc ? ' · ' + escHtml(acc.name) : '') + '</div>'
       + '<div class="tx-desc">' + escHtml(tx.description || tx.remark || '') + '</div>'
@@ -1660,6 +1870,9 @@ function changeMonth(delta) {
   var label = document.getElementById('monthLabel');
   label.classList.add('switching');
 
+  // Trigger global flash at center
+  triggerGlobalFlash(window.innerWidth / 2, window.innerHeight / 2);
+
   setTimeout(function() {
     currentMonth += delta;
     if (currentMonth > 12) { currentMonth = 1; currentYear++; }
@@ -1694,12 +1907,16 @@ function openAddModal(type) {
   switchType(selectedType);
   document.getElementById('addModal').classList.add('active');
 
+  // Trigger global flash
+  triggerGlobalFlash();
+
   // Update indicator after modal is visible
   setTimeout(updateTypeTabIndicator, 50);
 }
 
 function closeAddModal() {
   document.getElementById('addModal').classList.remove('active');
+  triggerGlobalFlash();
 }
 
 function switchType(type) {
@@ -1770,8 +1987,9 @@ function renderCatGrid() {
   }
   var html = '';
   cats.forEach(function(cat, idx) {
+    var iconHtml = renderIcon(cat.icon, 'style="font-size:1.3rem"');
     html += '<button class="cat-item" data-id="' + cat.id + '" onclick="selectCat(\'' + cat.id + '\')" style="animation: fadeSlideUp 0.3s var(--spring-smooth) ' + (idx * 0.03) + 's both">'
-      + '<span class="cat-icon">' + escHtml(cat.icon || '') + '</span>'
+      + '<span class="cat-icon">' + iconHtml + '</span>'
       + '<span class="cat-name">' + escHtml(cat.name) + '</span>'
       + '</button>';
   });
@@ -1794,8 +2012,9 @@ function renderAccGrid() {
   }
   var html = '';
   allAccounts.forEach(function(acc, idx) {
+    var iconHtml = renderIcon(acc.icon, 'style="font-size:1.2rem"');
     html += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectAcc(\'' + acc.id + '\')" style="animation: fadeSlideUp 0.3s var(--spring-smooth) ' + (idx * 0.03) + 's both">'
-      + '<span class="acc-icon">' + escHtml(acc.icon || '') + '</span>'
+      + '<span class="acc-icon">' + iconHtml + '</span>'
       + '<span class="acc-name">' + escHtml(acc.name) + '</span>'
       + '</button>';
   });
@@ -1820,12 +2039,13 @@ function renderTransferGrids() {
   }
   var htmlFrom = '', htmlTo = '';
   allAccounts.forEach(function(acc, idx) {
+    var iconHtml = renderIcon(acc.icon, 'style="font-size:1.2rem"');
     htmlFrom += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectFromAcc(\'' + acc.id + '\')" style="animation: fadeSlideUp 0.3s var(--spring-smooth) ' + (idx * 0.03) + 's both">'
-      + '<span class="acc-icon">' + escHtml(acc.icon || '') + '</span>'
+      + '<span class="acc-icon">' + iconHtml + '</span>'
       + '<span class="acc-name">' + escHtml(acc.name) + '</span>'
       + '</button>';
     htmlTo += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectToAcc(\'' + acc.id + '\')" style="animation: fadeSlideUp 0.3s var(--spring-smooth) ' + (idx * 0.03) + 's both">'
-      + '<span class="acc-icon">' + escHtml(acc.icon || '') + '</span>'
+      + '<span class="acc-icon">' + iconHtml + '</span>'
       + '<span class="acc-name">' + escHtml(acc.name) + '</span>'
       + '</button>';
   });
@@ -1962,10 +2182,12 @@ function openBudgetModal() {
   sel.innerHTML = html;
 
   document.getElementById('budgetModal').classList.add('active');
+  triggerGlobalFlash();
 }
 
 function closeBudgetModal() {
   document.getElementById('budgetModal').classList.remove('active');
+  triggerGlobalFlash();
 }
 
 async function submitBudget() {
@@ -2019,6 +2241,7 @@ function openLoanModal() {
   document.getElementById('loanDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('loanRemark').value = '';
   document.getElementById('loanModal').classList.add('active');
+  triggerGlobalFlash();
 }
 
 function openRepayModal(loanId) {
@@ -2030,10 +2253,12 @@ function openRepayModal(loanId) {
   document.getElementById('repayDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('repayRemark').value = '';
   document.getElementById('loanModal').classList.add('active');
+  triggerGlobalFlash();
 }
 
 function closeLoanModal() {
   document.getElementById('loanModal').classList.remove('active');
+  triggerGlobalFlash();
 }
 
 async function submitLoan() {
@@ -2215,6 +2440,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
   overlay.addEventListener('click', function(e) {
     if (e.target === overlay) {
       overlay.classList.remove('active');
+      triggerGlobalFlash();
     }
   });
 });
