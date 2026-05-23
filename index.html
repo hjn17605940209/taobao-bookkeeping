@@ -5,100 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人记账 - Personal Bookkeeping</title>
     
-    <!-- Fonts -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     
     <!-- Supabase -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd.min.js"></script>
     
     <!-- SheetJS for Excel export -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
-        /* CSS Variables - Warm Tone Design */
+        /* ============================================
+           CSS Variables - Design System
+           ============================================ */
         :root {
-            --bg: #f7f5f0;
-            --bg-card: #ffffff;
-            --bg-secondary: #faf8f3;
-            --accent: #c4501a;
-            --accent-light: #e87a3d;
-            --accent-dark: #9a3d14;
-            --text-primary: #2d2a26;
-            --text-secondary: #6b6560;
-            --text-muted: #9a9590;
-            --border: #e8e4de;
-            --shadow: rgba(45, 42, 38, 0.08);
-            --shadow-lg: rgba(45, 42, 38, 0.12);
-            --income: #2d8a4e;
-            --income-light: #e8f5ed;
-            --expense: #c4501a;
-            --expense-light: #fdf2ed;
-            --transfer: #5b7ba3;
-            --transfer-light: #eef2f7;
-            --warning: #d4a017;
-            --danger: #c41a1a;
-            --success: #2d8a4e;
-            --radius: 16px;
-            --radius-sm: 10px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            /* Colors */
+            --bg-primary: #0f0f10;
+            --bg-card: #18181b;
+            --bg-hover: #27272a;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --border: #27272a;
+            --border-light: #3f3f46;
+            
+            /* Border Radius */
+            --radius-card: 12px;
+            --radius-button: 8px;
+            --radius-tag: 6px;
+            
+            /* Shadows */
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+            --shadow-card-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+            
+            /* Transitions */
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.5s ease;
         }
-
-        * {
+        
+        /* ============================================
+           Reset & Base Styles
+           ============================================ */
+        *, *::before, *::after {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
-
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
         body {
-            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
+            overflow-x: hidden;
         }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-card);
         }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-hover);
+            border-radius: 4px;
         }
-
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-light);
         }
-
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
+        
+        /* ============================================
+           Typography
+           ============================================ */
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
         }
-
-        .animate-slide-in {
-            animation: slideIn 0.4s ease-out forwards;
+        
+        .text-gradient {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-
-        /* Layout */
+        
+        /* ============================================
+           Layout
+           ============================================ */
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
-
-        /* Header */
+        
         .header {
             display: flex;
             justify-content: space-between;
@@ -106,448 +124,368 @@
             padding: 20px 0;
             margin-bottom: 24px;
             border-bottom: 1px solid var(--border);
-            animation: fadeIn 0.5s ease-out;
         }
-
-        .header h1 {
-            font-size: 28px;
+        
+        .header-title {
+            font-size: 24px;
             font-weight: 700;
-            color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 12px;
         }
-
-        .header h1::before {
-            content: '📊';
-            font-size: 32px;
+        
+        .header-title .icon {
+            font-size: 28px;
         }
-
+        
         .header-actions {
             display: flex;
             gap: 12px;
             align-items: center;
         }
-
-        .sync-status {
+        
+        /* Grid Layouts */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-3, .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Section */
+        .section {
+            margin-bottom: 32px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* ============================================
+           Cards
+           ============================================ */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            border: 1px solid var(--border);
+            padding: 20px;
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow-card);
+        }
+        
+        .card:hover {
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-card-hover);
+        }
+        
+        .card-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: var(--text-muted);
-            padding: 6px 12px;
-            background: var(--bg-secondary);
-            border-radius: 20px;
+            margin-bottom: 12px;
         }
-
-        .sync-status.syncing::before {
-            content: '';
-            width: 12px;
-            height: 12px;
-            border: 2px solid var(--accent);
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        
+        .card-label {
+            font-size: 14px;
+            color: var(--text-secondary);
         }
-
-        .sync-status.synced::before {
-            content: '✓';
+        
+        .card-value {
+            font-size: 28px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .card-value.income {
             color: var(--success);
-            font-weight: bold;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        
+        .card-value.expense {
+            color: var(--danger);
         }
-
-        /* Buttons */
+        
+        .card-value.balance {
+            color: var(--text-primary);
+        }
+        
+        /* ============================================
+           Buttons
+           ============================================ */
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
             padding: 10px 20px;
-            border: none;
-            border-radius: var(--radius-sm);
             font-size: 14px;
             font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
             font-family: inherit;
+            border-radius: var(--radius-button);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            text-decoration: none;
         }
-
+        
+        .btn:hover {
+            background: var(--border-light);
+            transform: translateY(-1px);
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
         .btn-primary {
             background: var(--accent);
             color: white;
         }
-
+        
         .btn-primary:hover {
-            background: var(--accent-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(196, 80, 26, 0.3);
+            background: var(--accent-hover);
+            box-shadow: var(--shadow-glow);
         }
-
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--border);
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #a01515;
-        }
-
+        
         .btn-success {
             background: var(--success);
             color: white;
         }
-
+        
         .btn-success:hover {
-            background: #236b3b;
+            background: #16a34a;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
         }
-
-        .btn-large {
-            padding: 16px 32px;
-            font-size: 16px;
-            border-radius: var(--radius);
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
         }
-
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border-color: var(--border);
+        }
+        
+        .btn-outline:hover {
+            border-color: var(--border-light);
+            background: var(--bg-hover);
+        }
+        
         .btn-icon {
             width: 40px;
             height: 40px;
             padding: 0;
-            border-radius: 50%;
+            border-radius: var(--radius-button);
         }
-
-        /* Account Cards */
-        .accounts-section {
-            margin-bottom: 28px;
+        
+        .btn-large {
+            padding: 16px 32px;
+            font-size: 16px;
+            border-radius: var(--radius-card);
         }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: var(--text-primary);
+        
+        .btn-block {
+            width: 100%;
+        }
+        
+        /* Quick Action Buttons */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        
+        @media (max-width: 768px) {
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .quick-action-btn {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            gap: 12px;
+            padding: 32px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow-card);
         }
-
+        
+        .quick-action-btn:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-card-hover), var(--shadow-glow);
+        }
+        
+        .quick-action-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .quick-action-btn .icon {
+            font-size: 40px;
+            transition: transform var(--transition-normal);
+        }
+        
+        .quick-action-btn:hover .icon {
+            transform: scale(1.1);
+        }
+        
+        .quick-action-btn .label {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        /* ============================================
+           Account Cards
+           ============================================ */
         .accounts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 16px;
         }
-
+        
         .account-card {
             background: var(--bg-card);
-            border-radius: var(--radius);
-            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 16px;
             cursor: pointer;
-            transition: var(--transition);
-            border: 2px solid transparent;
-            box-shadow: 0 2px 8px var(--shadow);
-            animation: fadeIn 0.5s ease-out backwards;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
         }
-
-        .account-card:nth-child(1) { animation-delay: 0.1s; }
-        .account-card:nth-child(2) { animation-delay: 0.15s; }
-        .account-card:nth-child(3) { animation-delay: 0.2s; }
-        .account-card:nth-child(4) { animation-delay: 0.25s; }
-        .account-card:nth-child(5) { animation-delay: 0.3s; }
-
+        
+        .account-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+            transform: scaleX(0);
+            transition: transform var(--transition-normal);
+        }
+        
         .account-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px var(--shadow-lg);
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-card-hover);
         }
-
-        .account-card.active {
+        
+        .account-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .account-card.selected {
             border-color: var(--accent);
-            background: var(--expense-light);
+            background: rgba(99, 102, 241, 0.1);
         }
-
+        
+        .account-card.selected::before {
+            transform: scaleX(1);
+        }
+        
         .account-icon {
             font-size: 32px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
-
+        
         .account-name {
             font-size: 14px;
             color: var(--text-secondary);
             margin-bottom: 4px;
         }
-
+        
         .account-balance {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
-            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
         }
-
-        .account-card.credit .account-balance {
-            color: var(--expense);
-        }
-
-        /* Summary Cards */
-        .summary-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-
-        .summary-card {
-            background: var(--bg-card);
-            border-radius: var(--radius);
-            padding: 24px;
-            box-shadow: 0 2px 8px var(--shadow);
-            animation: fadeIn 0.5s ease-out backwards;
-            animation-delay: 0.35s;
-        }
-
-        .summary-card.income {
-            border-left: 4px solid var(--income);
-        }
-
-        .summary-card.expense {
-            border-left: 4px solid var(--expense);
-        }
-
-        .summary-card.balance {
-            border-left: 4px solid var(--accent);
-        }
-
-        .summary-label {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .summary-value {
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .summary-card.income .summary-value {
-            color: var(--income);
-        }
-
-        .summary-card.expense .summary-value {
-            color: var(--expense);
-        }
-
-        .summary-card.balance .summary-value {
-            color: var(--accent);
-        }
-
-        /* Budget Progress */
-        .budget-progress {
-            background: var(--bg-card);
-            border-radius: var(--radius);
-            padding: 20px 24px;
-            margin-bottom: 28px;
-            box-shadow: 0 2px 8px var(--shadow);
-            animation: fadeIn 0.5s ease-out backwards;
-            animation-delay: 0.4s;
-        }
-
-        .budget-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .budget-title {
-            font-weight: 600;
-            font-size: 15px;
-        }
-
-        .budget-stats {
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-
-        .progress-bar {
-            height: 10px;
-            background: var(--bg-secondary);
-            border-radius: 5px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-light), var(--accent));
-            border-radius: 5px;
-            transition: width 0.6s ease;
-            position: relative;
-        }
-
-        .progress-fill.warning {
-            background: linear-gradient(90deg, var(--warning), #e6b800);
-        }
-
-        .progress-fill.danger {
-            background: linear-gradient(90deg, var(--danger), #e02020);
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
-            animation: fadeIn 0.5s ease-out backwards;
-            animation-delay: 0.45s;
-        }
-
-        .quick-btn {
-            flex: 1;
-            min-width: 140px;
-            padding: 20px 24px;
-            border-radius: var(--radius);
-            border: none;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: inherit;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .quick-btn:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px var(--shadow-lg);
-        }
-
-        .quick-btn.income {
-            background: var(--income-light);
-            color: var(--income);
-        }
-
-        .quick-btn.expense {
-            background: var(--expense-light);
-            color: var(--expense);
-        }
-
-        .quick-btn.transfer {
-            background: var(--transfer-light);
-            color: var(--transfer);
-        }
-
-        .quick-btn .icon {
-            font-size: 32px;
-        }
-
-        .quick-btn .label {
-            font-size: 15px;
-            font-weight: 600;
-        }
-
-        /* Charts Section */
-        .charts-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 24px;
-            margin-bottom: 28px;
-        }
-
-        .chart-card {
-            background: var(--bg-card);
-            border-radius: var(--radius);
-            padding: 24px;
-            box-shadow: 0 2px 8px var(--shadow);
-            animation: fadeIn 0.5s ease-out backwards;
-            animation-delay: 0.5s;
-        }
-
-        .chart-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: var(--text-primary);
-        }
-
+        
+        /* ============================================
+           Charts
+           ============================================ */
         .chart-container {
-            position: relative;
-            height: 280px;
-        }
-
-        /* Transactions Section */
-        .transactions-section {
             background: var(--bg-card);
-            border-radius: var(--radius);
-            padding: 24px;
-            box-shadow: 0 2px 8px var(--shadow);
-            animation: fadeIn 0.5s ease-out backwards;
-            animation-delay: 0.55s;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .filter-bar {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .filter-bar select,
-        .filter-bar input {
-            padding: 8px 14px;
             border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            font-family: inherit;
+            border-radius: var(--radius-card);
+            padding: 20px;
+            height: 320px;
+            position: relative;
+        }
+        
+        .chart-title {
             font-size: 14px;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
         }
-
+        
+        .chart-wrapper {
+            position: relative;
+            height: calc(100% - 40px);
+        }
+        
+        /* ============================================
+           Transaction List
+           ============================================ */
         .transaction-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            overflow: hidden;
         }
-
+        
         .transaction-item {
             display: flex;
             align-items: center;
-            padding: 16px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
-            transition: var(--transition);
-            animation: slideIn 0.3s ease-out backwards;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            transition: background var(--transition-fast);
         }
-
+        
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+        
         .transaction-item:hover {
-            background: var(--bg);
-            transform: translateX(4px);
+            background: var(--bg-hover);
         }
-
+        
         .transaction-icon {
             width: 44px;
             height: 44px;
-            border-radius: 50%;
+            border-radius: var(--radius-tag);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -555,154 +493,154 @@
             margin-right: 16px;
             flex-shrink: 0;
         }
-
-        .transaction-icon.income {
-            background: var(--income-light);
-        }
-
-        .transaction-icon.expense {
-            background: var(--expense-light);
-        }
-
-        .transaction-icon.transfer {
-            background: var(--transfer-light);
-        }
-
+        
         .transaction-info {
             flex: 1;
             min-width: 0;
         }
-
-        .transaction-category {
-            font-weight: 600;
-            font-size: 15px;
-            margin-bottom: 2px;
+        
+        .transaction-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-
+        
         .transaction-meta {
-            font-size: 13px;
-            color: var(--text-muted);
+            font-size: 12px;
+            color: var(--text-secondary);
             display: flex;
             gap: 12px;
-            flex-wrap: wrap;
         }
-
+        
         .transaction-amount {
-            font-size: 18px;
-            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
             margin-right: 16px;
         }
-
+        
         .transaction-amount.income {
-            color: var(--income);
+            color: var(--success);
         }
-
+        
         .transaction-amount.expense {
-            color: var(--expense);
+            color: var(--danger);
         }
-
+        
         .transaction-actions {
             display: flex;
             gap: 8px;
         }
-
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
-            border-radius: 6px;
-        }
-
+        
         .empty-state {
             text-align: center;
-            padding: 48px 24px;
-            color: var(--text-muted);
+            padding: 48px 20px;
+            color: var(--text-secondary);
         }
-
+        
         .empty-state-icon {
             font-size: 48px;
             margin-bottom: 16px;
             opacity: 0.5;
         }
-
-        /* Modal */
+        
+        /* ============================================
+           Modal
+           ============================================ */
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(45, 42, 38, 0.6);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 1000;
             opacity: 0;
             visibility: hidden;
-            transition: var(--transition);
-            backdrop-filter: blur(4px);
+            transition: all var(--transition-normal);
         }
-
+        
         .modal-overlay.active {
             opacity: 1;
             visibility: visible;
         }
-
+        
         .modal {
             background: var(--bg-card);
-            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
             width: 90%;
-            max-width: 520px;
+            max-width: 500px;
             max-height: 90vh;
-            overflow-y: auto;
+            overflow: hidden;
             transform: scale(0.95) translateY(20px);
-            transition: var(--transition);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transition: transform var(--transition-normal);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-
+        
         .modal-overlay.active .modal {
             transform: scale(1) translateY(0);
         }
-
+        
         .modal-header {
-            padding: 24px 24px 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
         }
-
+        
         .modal-title {
-            font-size: 20px;
-            font-weight: 700;
+            font-size: 18px;
+            font-weight: 600;
         }
-
+        
         .modal-close {
-            background: none;
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-tag);
             border: none;
-            font-size: 24px;
+            background: var(--bg-hover);
+            color: var(--text-secondary);
             cursor: pointer;
-            color: var(--text-muted);
-            width: 36px;
-            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
-            transition: var(--transition);
+            transition: all var(--transition-fast);
         }
-
+        
         .modal-close:hover {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
+            background: var(--danger);
+            color: white;
         }
-
+        
         .modal-body {
-            padding: 24px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(90vh - 140px);
         }
-
+        
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            justify-content: flex-end;
+        }
+        
+        /* ============================================
+           Form Elements
+           ============================================ */
         .form-group {
             margin-bottom: 20px;
         }
-
+        
         .form-label {
             display: block;
             font-size: 14px;
@@ -710,284 +648,402 @@
             margin-bottom: 8px;
             color: var(--text-secondary);
         }
-
+        
         .form-input,
-        .form-select {
+        .form-select,
+        .form-textarea {
             width: 100%;
             padding: 12px 16px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
+            font-size: 14px;
             font-family: inherit;
-            font-size: 15px;
-            background: var(--bg-secondary);
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-button);
             color: var(--text-primary);
-            transition: var(--transition);
+            transition: all var(--transition-fast);
         }
-
+        
         .form-input:focus,
-        .form-select:focus {
+        .form-select:focus,
+        .form-textarea:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(196, 80, 26, 0.1);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
-
+        
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Category Grid */
         .category-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 4px;
         }
-
-        .category-option {
+        
+        @media (max-width: 480px) {
+            .category-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        .category-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
             padding: 12px 8px;
-            border: 2px solid var(--border);
-            border-radius: var(--radius-sm);
-            text-align: center;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-button);
             cursor: pointer;
-            transition: var(--transition);
-            background: var(--bg-secondary);
+            transition: all var(--transition-fast);
         }
-
-        .category-option:hover {
-            border-color: var(--accent-light);
+        
+        .category-item:hover {
+            border-color: var(--border-light);
+            background: var(--bg-hover);
         }
-
-        .category-option.selected {
+        
+        .category-item.selected {
             border-color: var(--accent);
-            background: var(--expense-light);
+            background: rgba(99, 102, 241, 0.1);
         }
-
-        .category-option .icon {
+        
+        .category-item .icon {
             font-size: 24px;
-            display: block;
+        }
+        
+        .category-item .name {
+            font-size: 11px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        
+        /* ============================================
+           Budget
+           ============================================ */
+        .budget-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 20px;
+        }
+        
+        .budget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .budget-info {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .budget-item {
+            text-align: center;
+        }
+        
+        .budget-item-label {
+            font-size: 12px;
+            color: var(--text-secondary);
             margin-bottom: 4px;
         }
-
-        .category-option .name {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .modal-footer {
-            padding: 0 24px 24px;
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-        }
-
-        /* Tabs */
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 12px;
-        }
-
-        .tab {
-            padding: 8px 16px;
-            border: none;
-            background: none;
-            font-family: inherit;
-            font-size: 14px;
-            cursor: pointer;
-            color: var(--text-secondary);
-            border-radius: var(--radius-sm);
-            transition: var(--transition);
-        }
-
-        .tab:hover {
-            color: var(--text-primary);
-            background: var(--bg-secondary);
-        }
-
-        .tab.active {
-            color: var(--accent);
-            background: var(--expense-light);
+        
+        .budget-item-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
             font-weight: 600;
         }
-
-        /* Loan Section */
-        .loan-section {
-            background: var(--bg-card);
-            border-radius: var(--radius);
-            padding: 24px;
-            margin-bottom: 28px;
-            box-shadow: 0 2px 8px var(--shadow);
-            animation: fadeIn 0.5s ease-out backwards;
-            animation-delay: 0.6s;
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
         }
-
-        .loan-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+            border-radius: 4px;
+            transition: width var(--transition-slow);
         }
-
-        .loan-stat {
-            text-align: center;
-            padding: 16px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
+        
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
         }
-
-        .loan-stat-value {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--expense);
+        
+        .progress-fill.danger {
+            background: linear-gradient(90deg, var(--danger), #f87171);
         }
-
-        .loan-stat-label {
+        
+        .budget-percentage {
+            text-align: right;
             font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 4px;
+            color: var(--text-secondary);
         }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .container {
-                padding: 12px;
+        
+        /* ============================================
+           Loan Management
+           ============================================ */
+        .loan-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .loan-tab {
+            padding: 8px 16px;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-tag);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: 14px;
+        }
+        
+        .loan-tab:hover {
+            background: var(--border-light);
+        }
+        
+        .loan-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .loan-list {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            overflow: hidden;
+        }
+        
+        .loan-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .loan-item:last-child {
+            border-bottom: none;
+        }
+        
+        .loan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .loan-title {
+            font-weight: 600;
+        }
+        
+        .loan-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+        
+        .loan-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        
+        .loan-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .loan-progress-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .loan-progress-fill {
+            height: 100%;
+            background: var(--success);
+            border-radius: 3px;
+            transition: width var(--transition-slow);
+        }
+        
+        .loan-progress-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* ============================================
+           Month Selector
+           ============================================ */
+        .month-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-button);
+            padding: 8px 16px;
+        }
+        
+        .month-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+            border-radius: var(--radius-tag);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .month-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .month-display {
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        /* ============================================
+           Tags
+           ============================================ */
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: var(--radius-tag);
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+        }
+        
+        .tag-primary {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent-hover);
+        }
+        
+        .tag-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+        
+        .tag-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+        
+        /* ============================================
+           Animations
+           ============================================ */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
             }
-
-            .header {
-                flex-direction: column;
-                gap: 16px;
-                text-align: center;
-            }
-
-            .header h1 {
-                font-size: 24px;
-            }
-
-            .accounts-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .account-card {
-                padding: 16px;
-            }
-
-            .account-balance {
-                font-size: 18px;
-            }
-
-            .summary-section {
-                grid-template-columns: 1fr;
-            }
-
-            .summary-value {
-                font-size: 24px;
-            }
-
-            .quick-actions {
-                flex-direction: column;
-            }
-
-            .quick-btn {
-                flex-direction: row;
-                justify-content: center;
-            }
-
-            .charts-section {
-                grid-template-columns: 1fr;
-            }
-
-            .chart-container {
-                height: 220px;
-            }
-
-            .section-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .filter-bar {
-                width: 100%;
-            }
-
-            .filter-bar select,
-            .filter-bar input {
-                flex: 1;
-            }
-
-            .transaction-item {
-                flex-wrap: wrap;
-            }
-
-            .transaction-amount {
-                width: 100%;
-                text-align: right;
-                margin: 8px 0 0;
-            }
-
-            .category-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-
-            .modal {
-                width: 95%;
-                max-height: 85vh;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
-
-        @media (max-width: 480px) {
-            .accounts-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
             }
-
-            .account-card {
-                padding: 12px;
-            }
-
-            .account-icon {
-                font-size: 24px;
-            }
-
-            .category-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
-            }
-
-            .category-option {
-                padding: 10px 4px;
-            }
-
-            .category-option .icon {
-                font-size: 20px;
+            to {
+                opacity: 1;
+                transform: translateX(0);
             }
         }
-
-        /* Print Styles */
-        @media print {
-            .header-actions,
-            .quick-actions,
-            .transaction-actions,
-            .modal-overlay,
-            .btn {
-                display: none !important;
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
             }
-
-            body {
-                background: white;
-            }
-
-            .container {
-                max-width: 100%;
-            }
-
-            .account-card,
-            .summary-card,
-            .chart-card,
-            .transactions-section,
-            .loan-section {
-                box-shadow: none;
-                border: 1px solid #ddd;
-                break-inside: avoid;
+            50% {
+                opacity: 0.5;
             }
         }
-
-        /* Loading State */
+        
+        @keyframes countUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        .animate-slide-in {
+            animation: slideIn 0.3s ease forwards;
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        /* Staggered animations */
+        .stagger-1 { animation-delay: 0.05s; }
+        .stagger-2 { animation-delay: 0.1s; }
+        .stagger-3 { animation-delay: 0.15s; }
+        .stagger-4 { animation-delay: 0.2s; }
+        .stagger-5 { animation-delay: 0.25s; }
+        
+        /* ============================================
+           Loading States
+           ============================================ */
         .loading {
             display: inline-block;
             width: 20px;
@@ -997,604 +1053,1131 @@
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
-
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
         .skeleton {
-            background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 50%, var(--bg-secondary) 75%);
+            background: linear-gradient(90deg, var(--bg-hover) 25%, var(--border) 50%, var(--bg-hover) 75%);
             background-size: 200% 100%;
             animation: shimmer 1.5s infinite;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-tag);
         }
-
-        /* Toast Notifications */
+        
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+        
+        /* ============================================
+           Toast Notifications
+           ============================================ */
         .toast-container {
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 1100;
+            z-index: 2000;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
-
+        
         .toast {
             background: var(--bg-card);
-            color: var(--text-primary);
-            padding: 14px 20px;
-            border-radius: var(--radius-sm);
-            box-shadow: 0 4px 20px var(--shadow-lg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-button);
+            padding: 16px 20px;
+            box-shadow: var(--shadow-card-hover);
             display: flex;
             align-items: center;
             gap: 12px;
-            animation: slideIn 0.3s ease-out;
             min-width: 280px;
-            border-left: 4px solid var(--accent);
+            animation: slideInRight 0.3s ease;
         }
-
+        
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
         .toast.success {
-            border-left-color: var(--success);
+            border-color: var(--success);
         }
-
+        
         .toast.error {
-            border-left-color: var(--danger);
+            border-color: var(--danger);
         }
-
-        .toast.warning {
-            border-left-color: var(--warning);
-        }
-
+        
         .toast-icon {
             font-size: 20px;
         }
-
-        .toast-message {
+        
+        .toast-content {
             flex: 1;
-            font-size: 14px;
         }
-
-        .toast-close {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: var(--text-muted);
-            font-size: 18px;
-            padding: 0;
-            width: 24px;
-            height: 24px;
+        
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .toast-message {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        /* ============================================
+           Responsive
+           ============================================ */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+            
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .card-value {
+                font-size: 22px;
+            }
+            
+            .modal {
+                width: 95%;
+                max-height: 95vh;
+            }
+            
+            .transaction-item {
+                flex-wrap: wrap;
+            }
+            
+            .transaction-amount {
+                margin-left: auto;
+            }
+            
+            .transaction-actions {
+                width: 100%;
+                justify-content: flex-end;
+                margin-top: 8px;
+            }
+        }
+        
+        /* ============================================
+           Utility Classes
+           ============================================ */
+        .hidden {
+            display: none !important;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .mb-0 {
+            margin-bottom: 0;
+        }
+        
+        .mt-16 {
+            margin-top: 16px;
+        }
+        
+        .flex {
             display: flex;
+        }
+        
+        .flex-between {
+            justify-content: space-between;
+        }
+        
+        .items-center {
             align-items: center;
-            justify-content: center;
+        }
+        
+        .gap-8 {
+            gap: 8px;
+        }
+        
+        .gap-16 {
+            gap: 16px;
+        }
+        
+        .w-full {
+            width: 100%;
         }
     </style>
 </head>
 <body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Main Container -->
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <h1>个人记账</h1>
+            <div class="header-title">
+                <span class="icon">💰</span>
+                <span>个人记账</span>
+            </div>
             <div class="header-actions">
-                <div class="sync-status" id="syncStatus">正在连接...</div>
-                <button class="btn btn-secondary" onclick="exportToExcel()">📥 导出Excel</button>
-                <button class="btn btn-secondary" onclick="window.print()">🖨️ 打印</button>
-                <button class="btn btn-primary" onclick="openBudgetModal()">💰 预算设置</button>
+                <!-- Month Selector -->
+                <div class="month-selector">
+                    <button class="month-btn" onclick="changeMonth(-1)">◀</button>
+                    <span class="month-display" id="currentMonthDisplay">2024-01</span>
+                    <button class="month-btn" onclick="changeMonth(1)">▶</button>
+                </div>
+                
+                <!-- Export Button -->
+                <button class="btn btn-outline" onclick="exportToExcel()">
+                    <span>📊</span>
+                    <span>导出</span>
+                </button>
+                
+                <!-- Settings Button -->
+                <button class="btn btn-icon" onclick="openSettingsModal()" title="设置">
+                    <span>⚙️</span>
+                </button>
             </div>
         </header>
-
-        <!-- Accounts Section -->
-        <section class="accounts-section">
-            <h2 class="section-title">💳 我的账户</h2>
-            <div class="accounts-grid" id="accountsGrid">
-                <!-- Account cards will be rendered here -->
+        
+        <!-- Monthly Overview -->
+        <section class="section">
+            <h2 class="section-title">本月概览</h2>
+            <div class="grid-3">
+                <div class="card animate-fade-in stagger-1">
+                    <div class="card-header">
+                        <span class="card-label">本月收入</span>
+                        <span class="tag tag-success">+</span>
+                    </div>
+                    <div class="card-value income font-mono" id="monthIncome">¥0.00</div>
+                </div>
+                <div class="card animate-fade-in stagger-2">
+                    <div class="card-header">
+                        <span class="card-label">本月支出</span>
+                        <span class="tag tag-danger">-</span>
+                    </div>
+                    <div class="card-value expense font-mono" id="monthExpense">¥0.00</div>
+                </div>
+                <div class="card animate-fade-in stagger-3">
+                    <div class="card-header">
+                        <span class="card-label">本月结余</span>
+                        <span class="tag tag-primary">=</span>
+                    </div>
+                    <div class="card-value balance font-mono" id="monthBalance">¥0.00</div>
+                </div>
             </div>
         </section>
-
-        <!-- Summary Section -->
-        <section class="summary-section">
-            <div class="summary-card income">
-                <div class="summary-label">本月收入</div>
-                <div class="summary-value" id="monthIncome">¥0.00</div>
-            </div>
-            <div class="summary-card expense">
-                <div class="summary-label">本月支出</div>
-                <div class="summary-value" id="monthExpense">¥0.00</div>
-            </div>
-            <div class="summary-card balance">
-                <div class="summary-label">本月结余</div>
-                <div class="summary-value" id="monthBalance">¥0.00</div>
-            </div>
-        </section>
-
-        <!-- Budget Progress -->
-        <div class="budget-progress" id="budgetSection" style="display: none;">
-            <div class="budget-header">
-                <span class="budget-title">📊 月度预算</span>
-                <span class="budget-stats" id="budgetStats">已用 ¥0 / ¥0</span>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="budgetProgress" style="width: 0%"></div>
-            </div>
-        </div>
-
+        
         <!-- Quick Actions -->
-        <section class="quick-actions">
-            <button class="quick-btn income" onclick="openTransactionModal('income')">
-                <span class="icon">💰</span>
-                <span class="label">记收入</span>
-            </button>
-            <button class="quick-btn expense" onclick="openTransactionModal('expense')">
-                <span class="icon">💸</span>
-                <span class="label">记支出</span>
-            </button>
-            <button class="quick-btn transfer" onclick="openTransactionModal('transfer')">
-                <span class="icon">🔄</span>
-                <span class="label">转账</span>
-            </button>
+        <section class="section">
+            <h2 class="section-title">快捷操作</h2>
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="openTransactionModal('income')">
+                    <span class="icon">💰</span>
+                    <span class="label">收入</span>
+                </button>
+                <button class="quick-action-btn" onclick="openTransactionModal('expense')">
+                    <span class="icon">💸</span>
+                    <span class="label">支出</span>
+                </button>
+                <button class="quick-action-btn" onclick="openTransactionModal('transfer')">
+                    <span class="icon">🔄</span>
+                    <span class="label">转账</span>
+                </button>
+            </div>
         </section>
-
-        <!-- Charts Section -->
-        <section class="charts-section">
-            <div class="chart-card">
-                <h3 class="chart-title">📊 支出分类占比</h3>
+        
+        <!-- Accounts -->
+        <section class="section">
+            <h2 class="section-title">我的账户</h2>
+            <div class="accounts-grid" id="accountsGrid">
+                <!-- Accounts will be rendered here -->
+            </div>
+        </section>
+        
+        <!-- Budget -->
+        <section class="section">
+            <h2 class="section-title">预算管理</h2>
+            <div class="budget-card">
+                <div class="budget-header">
+                    <div class="budget-info">
+                        <div class="budget-item">
+                            <div class="budget-item-label">月度预算</div>
+                            <div class="budget-item-value font-mono" id="budgetAmount">¥0.00</div>
+                        </div>
+                        <div class="budget-item">
+                            <div class="budget-item-label">已支出</div>
+                            <div class="budget-item-value font-mono" id="budgetSpent">¥0.00</div>
+                        </div>
+                        <div class="budget-item">
+                            <div class="budget-item-label">剩余</div>
+                            <div class="budget-item-value font-mono" id="budgetRemaining">¥0.00</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" onclick="openBudgetModal()">设置预算</button>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="budgetProgress" style="width: 0%"></div>
+                </div>
+                <div class="budget-percentage" id="budgetPercentage">已使用 0%</div>
+            </div>
+        </section>
+        
+        <!-- Charts -->
+        <section class="section">
+            <h2 class="section-title">数据图表</h2>
+            <div class="grid-2">
                 <div class="chart-container">
-                    <canvas id="expenseChart"></canvas>
+                    <div class="chart-title">支出分类占比</div>
+                    <div class="chart-wrapper">
+                        <canvas id="expensePieChart"></canvas>
+                    </div>
                 </div>
-            </div>
-            <div class="chart-card">
-                <h3 class="chart-title">📈 近6个月收支趋势</h3>
                 <div class="chart-container">
-                    <canvas id="trendChart"></canvas>
+                    <div class="chart-title">收支趋势</div>
+                    <div class="chart-wrapper">
+                        <canvas id="trendBarChart"></canvas>
+                    </div>
                 </div>
             </div>
         </section>
-
-        <!-- Loan Section -->
-        <section class="loan-section" id="loanSection">
-            <div class="section-header">
-                <h2 class="section-title">💳 贷款管理</h2>
-                <div>
-                    <button class="btn btn-primary" onclick="openLoanModal()">➕ 新增借款</button>
-                    <button class="btn btn-secondary" onclick="openRepaymentModal()">💵 记录还款</button>
-                </div>
-            </div>
-            <div class="loan-stats" id="loanStats">
-                <!-- Loan stats will be rendered here -->
-            </div>
-            <div class="transaction-list" id="loanList">
-                <!-- Loan list will be rendered here -->
-            </div>
-        </section>
-
-        <!-- Transactions Section -->
-        <section class="transactions-section">
-            <div class="section-header">
-                <h2 class="section-title">📝 收支明细</h2>
-                <div class="filter-bar">
-                    <select id="monthFilter" onchange="filterByMonth()">
-                        <!-- Month options will be populated -->
-                    </select>
-                    <select id="accountFilter" onchange="filterByAccount()">
-                        <option value="">所有账户</option>
-                    </select>
-                    <input type="text" id="searchInput" placeholder="搜索备注..." oninput="searchTransactions()">
-                </div>
-            </div>
+        
+        <!-- Recent Transactions -->
+        <section class="section">
+            <h2 class="section-title">最近交易</h2>
             <div class="transaction-list" id="transactionList">
                 <!-- Transactions will be rendered here -->
             </div>
         </section>
+        
+        <!-- Loan Management -->
+        <section class="section">
+            <h2 class="section-title">贷款管理</h2>
+            <div class="loan-tabs">
+                <button class="loan-tab active" onclick="switchLoanTab('borrowed')">我借的</button>
+                <button class="loan-tab" onclick="switchLoanTab('lent')">我借出的</button>
+                <button class="loan-tab" onclick="switchLoanTab('history')">历史记录</button>
+            </div>
+            <div class="loan-list" id="loanList">
+                <!-- Loans will be rendered here -->
+            </div>
+            <div class="mt-16">
+                <button class="btn btn-primary" onclick="openLoanModal()">
+                    <span>➕</span>
+                    <span>新增借款</span>
+                </button>
+            </div>
+        </section>
     </div>
-
+    
     <!-- Transaction Modal -->
     <div class="modal-overlay" id="transactionModal">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title" id="transactionModalTitle">记一笔</h3>
-                <button class="modal-close" onclick="closeModal('transactionModal')">&times;</button>
+                <h3 class="modal-title" id="transactionModalTitle">记账</h3>
+                <button class="modal-close" onclick="closeModal('transactionModal')">✕</button>
             </div>
             <div class="modal-body">
-                <div class="tabs" id="transactionTabs">
-                    <button class="tab active" data-type="expense" onclick="switchTransactionType('expense')">支出</button>
-                    <button class="tab" data-type="income" onclick="switchTransactionType('income')">收入</button>
-                    <button class="tab" data-type="transfer" onclick="switchTransactionType('transfer')">转账</button>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">选择分类</label>
-                    <div class="category-grid" id="categoryGrid">
-                        <!-- Categories will be rendered here -->
+                <form id="transactionForm">
+                    <input type="hidden" id="transactionType" value="expense">
+                    
+                    <!-- Amount -->
+                    <div class="form-group">
+                        <label class="form-label">金额</label>
+                        <input type="number" class="form-input font-mono" id="transactionAmount" placeholder="0.00" step="0.01" min="0.01" required>
                     </div>
-                </div>
-
-                <div class="form-group" id="fromAccountGroup">
-                    <label class="form-label" id="fromAccountLabel">支出账户</label>
-                    <select class="form-select" id="fromAccount">
-                        <!-- Accounts will be populated -->
-                    </select>
-                </div>
-
-                <div class="form-group" id="toAccountGroup" style="display: none;">
-                    <label class="form-label">转入账户</label>
-                    <select class="form-select" id="toAccount">
-                        <!-- Accounts will be populated -->
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">金额</label>
-                    <input type="number" class="form-input" id="transactionAmount" placeholder="0.00" step="0.01">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">日期</label>
-                    <input type="date" class="form-input" id="transactionDate">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">备注（可选）</label>
-                    <input type="text" class="form-input" id="transactionNote" placeholder="添加备注...">
-                </div>
+                    
+                    <!-- Category -->
+                    <div class="form-group">
+                        <label class="form-label">分类</label>
+                        <div class="category-grid" id="categoryGrid">
+                            <!-- Categories will be rendered here -->
+                        </div>
+                        <input type="hidden" id="selectedCategory" required>
+                    </div>
+                    
+                    <!-- Account Selection -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" id="fromAccountLabel">账户</label>
+                            <select class="form-select" id="fromAccount" required>
+                                <!-- Options will be rendered here -->
+                            </select>
+                        </div>
+                        <div class="form-group" id="toAccountGroup" style="display: none;">
+                            <label class="form-label">转入账户</label>
+                            <select class="form-select" id="toAccount">
+                                <!-- Options will be rendered here -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Date & Time -->
+                    <div class="form-group">
+                        <label class="form-label">日期时间</label>
+                        <input type="datetime-local" class="form-input" id="transactionDate" required>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label class="form-label">备注（可选）</label>
+                        <textarea class="form-textarea" id="transactionDescription" placeholder="添加备注..."></textarea>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('transactionModal')">取消</button>
+                <button class="btn btn-outline" onclick="closeModal('transactionModal')">取消</button>
                 <button class="btn btn-primary" onclick="saveTransaction()">保存</button>
             </div>
         </div>
     </div>
-
+    
     <!-- Budget Modal -->
     <div class="modal-overlay" id="budgetModal">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">💰 预算设置</h3>
-                <button class="modal-close" onclick="closeModal('budgetModal')">&times;</button>
+                <h3 class="modal-title">设置月度预算</h3>
+                <button class="modal-close" onclick="closeModal('budgetModal')">✕</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">月度总预算</label>
-                    <input type="number" class="form-input" id="totalBudget" placeholder="0.00" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">预算周期</label>
-                    <select class="form-select" id="budgetPeriod">
-                        <option value="monthly">每月</option>
-                        <option value="weekly">每周</option>
-                        <option value="yearly">每年</option>
-                    </select>
-                </div>
+                <form id="budgetForm">
+                    <div class="form-group">
+                        <label class="form-label">预算金额</label>
+                        <input type="number" class="form-input font-mono" id="budgetInput" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">月份</label>
+                        <input type="month" class="form-input" id="budgetMonth" required>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('budgetModal')">取消</button>
-                <button class="btn btn-primary" onclick="saveBudget()">保存预算</button>
+                <button class="btn btn-outline" onclick="closeModal('budgetModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveBudget()">保存</button>
             </div>
         </div>
     </div>
-
+    
     <!-- Loan Modal -->
     <div class="modal-overlay" id="loanModal">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">➕ 新增借款</h3>
-                <button class="modal-close" onclick="closeModal('loanModal')">&times;</button>
+                <h3 class="modal-title" id="loanModalTitle">新增借款</h3>
+                <button class="modal-close" onclick="closeModal('loanModal')">✕</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">借款人</label>
-                    <input type="text" class="form-input" id="loanBorrower" placeholder="借款人姓名">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">借款金额</label>
-                    <input type="number" class="form-input" id="loanAmount" placeholder="0.00" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">借款日期</label>
-                    <input type="date" class="form-input" id="loanDate">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">年利率 (%)</label>
-                    <input type="number" class="form-input" id="loanRate" value="17.64" step="0.01">
-                    <small style="color: var(--text-muted);">默认年利率 17.64%，日利率约 0.0483%</small>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">备注</label>
-                    <input type="text" class="form-input" id="loanNote" placeholder="可选">
-                </div>
+                <form id="loanForm">
+                    <input type="hidden" id="loanType" value="borrowed">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">借款类型</label>
+                            <select class="form-select" id="loanTypeSelect" onchange="updateLoanType()">
+                                <option value="borrowed">我借入</option>
+                                <option value="lent">我借出</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">对方姓名</label>
+                            <input type="text" class="form-input" id="loanPerson" placeholder="输入姓名" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">借款金额</label>
+                            <input type="number" class="form-input font-mono" id="loanAmount" placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">年利率 (%)</label>
+                            <input type="number" class="form-input font-mono" id="loanInterestRate" placeholder="0" step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">借款日期</label>
+                            <input type="date" class="form-input" id="loanDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">还款日期（可选）</label>
+                            <input type="date" class="form-input" id="loanDueDate">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">关联账户</label>
+                        <select class="form-select" id="loanAccount" required>
+                            <!-- Options will be rendered here -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">备注（可选）</label>
+                        <textarea class="form-textarea" id="loanDescription" placeholder="添加备注..."></textarea>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('loanModal')">取消</button>
+                <button class="btn btn-outline" onclick="closeModal('loanModal')">取消</button>
                 <button class="btn btn-primary" onclick="saveLoan()">保存</button>
             </div>
         </div>
     </div>
-
+    
     <!-- Repayment Modal -->
     <div class="modal-overlay" id="repaymentModal">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">💵 记录还款</h3>
-                <button class="modal-close" onclick="closeModal('repaymentModal')">&times;</button>
+                <h3 class="modal-title">还款记录</h3>
+                <button class="modal-close" onclick="closeModal('repaymentModal')">✕</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">选择借款</label>
-                    <select class="form-select" id="repaymentLoan">
-                        <!-- Active loans will be populated -->
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">还款金额</label>
-                    <input type="number" class="form-input" id="repaymentAmount" placeholder="0.00" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">还款日期</label>
-                    <input type="date" class="form-input" id="repaymentDate">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">还款类型</label>
-                    <select class="form-select" id="repaymentType">
-                        <option value="principal">本金</option>
-                        <option value="interest">利息</option>
-                        <option value="both">本金+利息</option>
-                    </select>
-                </div>
+                <form id="repaymentForm">
+                    <input type="hidden" id="repaymentLoanId">
+                    
+                    <div class="form-group">
+                        <label class="form-label">还款金额</label>
+                        <input type="number" class="form-input font-mono" id="repaymentAmount" placeholder="0.00" step="0.01" min="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">还款日期</label>
+                        <input type="date" class="form-input" id="repaymentDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">关联账户</label>
+                        <select class="form-select" id="repaymentAccount" required>
+                            <!-- Options will be rendered here -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">备注（可选）</label>
+                        <textarea class="form-textarea" id="repaymentDescription" placeholder="添加备注..."></textarea>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('repaymentModal')">取消</button>
+                <button class="btn btn-outline" onclick="closeModal('repaymentModal')">取消</button>
                 <button class="btn btn-primary" onclick="saveRepayment()">保存</button>
             </div>
         </div>
     </div>
-
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">设置</h3>
+                <button class="modal-close" onclick="closeModal('settingsModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">数据管理</label>
+                    <div class="flex gap-8">
+                        <button class="btn btn-outline" onclick="initDatabase()">
+                            <span>🔄</span>
+                            <span>初始化数据</span>
+                        </button>
+                        <button class="btn btn-outline" onclick="clearAllData()">
+                            <span>🗑️</span>
+                            <span>清空数据</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">关于</label>
+                    <p style="color: var(--text-secondary); font-size: 14px;">
+                        个人记账应用 v2.0<br>
+                        使用 Supabase 存储数据
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('settingsModal')">关闭</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // ==========================================
+        // ============================================
         // Global Variables
-        // ==========================================
+        // ============================================
         var _sb = null;
-        var currentTransactionType = 'expense';
-        var selectedCategory = null;
+        var currentMonth = new Date().toISOString().slice(0, 7);
         var accounts = [];
         var categories = [];
         var transactions = [];
         var budgets = [];
         var loans = [];
         var repayments = [];
-        var expenseChart = null;
-        var trendChart = null;
-        var currentAccountFilter = '';
-
-        // ==========================================
-        // Supabase Configuration
-        // ==========================================
-        var SUPABASE_URL = 'https://vjildthiuxhoukakvtui.supabase.co';
-        var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg';
-
-        // ==========================================
+        var expensePieChart = null;
+        var trendBarChart = null;
+        var currentLoanTab = 'borrowed';
+        
+        // ============================================
         // Category Definitions
-        // ==========================================
-        var EXPENSE_CATEGORIES = [
-            { id: 'food', name: '餐饮', icon: '🍔', color: '#e87a3d' },
-            { id: 'transport', name: '交通', icon: '🚗', color: '#5b7ba3' },
-            { id: 'shopping', name: '购物', icon: '🛍️', color: '#c4501a' },
-            { id: 'entertainment', name: '娱乐', icon: '🎬', color: '#9b59b6' },
-            { id: 'housing', name: '居住', icon: '🏠', color: '#2d8a4e' },
-            { id: 'medical', name: '医疗', icon: '🏥', color: '#e74c3c' },
-            { id: 'education', name: '教育', icon: '📚', color: '#3498db' },
-            { id: 'utilities', name: '水电', icon: '💡', color: '#f39c12' },
-            { id: 'communication', name: '通讯', icon: '📱', color: '#1abc9c' },
-            { id: 'clothing', name: '服饰', icon: '👔', color: '#e91e63' },
-            { id: 'beauty', name: '美容', icon: '💄', color: '#ff69b4' },
-            { id: 'sports', name: '运动', icon: '⚽', color: '#27ae60' },
-            { id: 'travel', name: '旅游', icon: '✈️', color: '#3498db' },
-            { id: 'pet', name: '宠物', icon: '🐾', color: '#8b4513' },
-            { id: 'gift', name: '礼物', icon: '🎁', color: '#e74c3c' },
-            { id: 'donation', name: '捐赠', icon: '❤️', color: '#e74c3c' },
-            { id: 'insurance', name: '保险', icon: '🛡️', color: '#34495e' },
-            { id: 'other_expense', name: '其他', icon: '📦', color: '#95a5a6' }
+        // ============================================
+        var expenseCategories = [
+            { id: 'food', name: '餐饮', icon: '🍔', color: '#f59e0b' },
+            { id: 'transport', name: '交通', icon: '🚗', color: '#3b82f6' },
+            { id: 'shopping', name: '购物', icon: '🛍️', color: '#ec4899' },
+            { id: 'entertainment', name: '娱乐', icon: '🎮', color: '#8b5cf6' },
+            { id: 'housing', name: '居住', icon: '🏠', color: '#10b981' },
+            { id: 'medical', name: '医疗', icon: '🏥', color: '#ef4444' },
+            { id: 'education', name: '教育', icon: '📚', color: '#06b6d4' },
+            { id: 'utilities', name: '水电', icon: '💡', color: '#f97316' },
+            { id: 'communication', name: '通讯', icon: '📱', color: '#6366f1' },
+            { id: 'clothing', name: '服饰', icon: '👔', color: '#d946ef' },
+            { id: 'beauty', name: '美容', icon: '💄', color: '#f43f5e' },
+            { id: 'sports', name: '运动', icon: '⚽', color: '#22c55e' },
+            { id: 'travel', name: '旅游', icon: '✈️', color: '#0ea5e9' },
+            { id: 'pets', name: '宠物', icon: '🐾', color: '#a16207' },
+            { id: 'gifts', name: '礼物', icon: '🎁', color: '#e11d48' },
+            { id: 'donation', name: '捐赠', icon: '❤️', color: '#dc2626' },
+            { id: 'investment', name: '投资', icon: '📈', color: '#059669' },
+            { id: 'other', name: '其他', icon: '📦', color: '#6b7280' }
         ];
-
-        var INCOME_CATEGORIES = [
-            { id: 'salary', name: '工资', icon: '💼', color: '#2d8a4e' },
-            { id: 'bonus', name: '奖金', icon: '🎉', color: '#e87a3d' },
-            { id: 'investment', name: '投资', icon: '📈', color: '#3498db' },
-            { id: 'parttime', name: '兼职', icon: '💪', color: '#9b59b6' },
-            { id: 'gift_income', name: '礼金', icon: '🧧', color: '#e74c3c' },
-            { id: 'refund', name: '退款', icon: '↩️', color: '#1abc9c' },
-            { id: 'other_income', name: '其他', icon: '💰', color: '#95a5a6' }
+        
+        var incomeCategories = [
+            { id: 'salary', name: '工资', icon: '💼', color: '#22c55e' },
+            { id: 'bonus', name: '奖金', icon: '🎉', color: '#f59e0b' },
+            { id: 'investment', name: '投资收益', icon: '📈', color: '#3b82f6' },
+            { id: 'parttime', name: '兼职', icon: '💪', color: '#8b5cf6' },
+            { id: 'gift', name: '礼金', icon: '🧧', color: '#ec4899' },
+            { id: 'refund', name: '退款', icon: '↩️', color: '#06b6d4' },
+            { id: 'other_income', name: '其他', icon: '💰', color: '#6b7280' }
         ];
-
-        var TRANSFER_CATEGORIES = [
-            { id: 'transfer', name: '转账', icon: '🔄', color: '#5b7ba3' }
+        
+        var defaultAccounts = [
+            { id: 'cash', name: '现金', icon: '💵', color: '#22c55e', balance: 0 },
+            { id: 'bank', name: '银行卡', icon: '💳', color: '#3b82f6', balance: 0 },
+            { id: 'alipay', name: '支付宝', icon: '🔵', color: '#1677ff', balance: 0 },
+            { id: 'wechat', name: '微信', icon: '🟢', color: '#07c160', balance: 0 },
+            { id: 'credit', name: '信用卡', icon: '💰', color: '#f59e0b', balance: 0 }
         ];
-
-        // ==========================================
+        
+        // ============================================
         // Initialization
-        // ==========================================
-        function waitForSupabase(callback) {
-            if (typeof supabase !== 'undefined' && supabase.createClient) {
-                _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                callback();
-            } else {
-                setTimeout(function() {
-                    waitForSupabase(callback);
-                }, 100);
-            }
-        }
-
+        // ============================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Set today's date for date inputs
-            var today = new Date().toISOString().split('T')[0];
-            document.getElementById('transactionDate').value = today;
-            document.getElementById('loanDate').value = today;
-            document.getElementById('repaymentDate').value = today;
-
-            // Initialize Supabase
-            waitForSupabase(function() {
-                console.log('Supabase initialized');
-                updateSyncStatus('syncing');
-                initializeData();
-            });
-
-            // Setup month filter
-            setupMonthFilter();
+            initSupabase();
+            initDateInputs();
+            updateMonthDisplay();
+            loadAllData();
         });
-
-        // ==========================================
-        // Data Loading
-        // ==========================================
-        async function initializeData() {
+        
+        function initSupabase() {
             try {
-                await Promise.all([
-                    loadAccounts(),
-                    loadCategories(),
-                    loadTransactions(),
-                    loadBudgets(),
-                    loadLoans(),
-                    loadRepayments()
-                ]);
-                
-                renderAll();
-                updateSyncStatus('synced');
-                showToast('数据同步成功', 'success');
+                var supabaseUrl = 'https://vjildthiuxhoukakvtui.supabase.co';
+                var supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqaWxkdGhpdXhob3VrYWt2dHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTA1MDgsImV4cCI6MjA5MzU4NjUwOH0.HAb9Vz8u0uBXOqyxrrBGlH-M9mYwEQa2kYZ_7qdKAgg';
+                _sb = supabase.createClient(supabaseUrl, supabaseKey);
+                console.log('Supabase initialized');
             } catch (error) {
-                console.error('Error initializing data:', error);
-                updateSyncStatus('error');
-                showToast('数据同步失败: ' + error.message, 'error');
+                console.error('Supabase init error:', error);
+                showToast('数据库连接失败', 'error');
             }
         }
-
-        async function loadAccounts() {
-            var result = await _sb.from('accounts').select('*').order('id');
-            if (result.error) throw result.error;
-            accounts = result.data || [];
+        
+        function initDateInputs() {
+            var now = new Date();
+            var dateStr = now.toISOString().slice(0, 16);
+            document.getElementById('transactionDate').value = dateStr;
+            document.getElementById('loanDate').value = now.toISOString().slice(0, 10);
+            document.getElementById('repaymentDate').value = now.toISOString().slice(0, 10);
+            document.getElementById('budgetMonth').value = currentMonth;
         }
-
-        async function loadCategories() {
-            var result = await _sb.from('categories').select('*').order('id');
-            if (result.error) throw result.error;
-            categories = result.data || [];
-        }
-
-        async function loadTransactions() {
-            var result = await _sb.from('transactions')
-                .select('*')
-                .order('date', { ascending: false })
-                .order('created_at', { ascending: false });
-            if (result.error) throw result.error;
-            transactions = result.data || [];
-        }
-
-        async function loadBudgets() {
-            var result = await _sb.from('budgets').select('*');
-            if (result.error) throw result.error;
-            budgets = result.data || [];
-        }
-
-        async function loadLoans() {
-            var result = await _sb.from('loans').select('*').order('date', { ascending: false });
-            if (result.error) throw result.error;
-            loans = result.data || [];
-        }
-
-        async function loadRepayments() {
-            var result = await _sb.from('repayments').select('*').order('date', { ascending: false });
-            if (result.error) throw result.error;
-            repayments = result.data || [];
-        }
-
-        // ==========================================
-        // Rendering Functions
-        // ==========================================
-        function renderAll() {
-            renderAccounts();
-            renderSummary();
-            renderBudget();
-            renderCategoryGrid();
-            renderCharts();
-            renderLoans();
-            renderTransactions();
-            updateAccountFilter();
-        }
-
-        function renderAccounts() {
-            var grid = document.getElementById('accountsGrid');
-            var accountIcons = {
-                'cash': '💵',
-                'bank': '💳',
-                'alipay': '🔵',
-                'wechat': '🟢',
-                'credit': '💰'
-            };
+        
+        // ============================================
+        // Data Loading
+        // ============================================
+        async function loadAllData() {
+            await Promise.all([
+                loadAccounts(),
+                loadCategories(),
+                loadTransactions(),
+                loadBudgets(),
+                loadLoans(),
+                loadRepayments()
+            ]);
             
-            var accountNames = {
-                'cash': '现金',
-                'bank': '银行卡',
-                'alipay': '支付宝',
-                'wechat': '微信',
-                'credit': '信用卡'
-            };
-
-            grid.innerHTML = accounts.map(function(account) {
-                var isCredit = account.type === 'credit';
-                var activeClass = currentAccountFilter === account.id ? 'active' : '';
-                return `
-                    <div class="account-card ${isCredit ? 'credit' : ''} ${activeClass}" 
-                         onclick="selectAccount('${account.id}')" 
-                         style="animation-delay: ${account.id * 0.05}s">
-                        <div class="account-icon">${accountIcons[account.type] || '💳'}</div>
-                        <div class="account-name">${accountNames[account.type] || account.name}</div>
-                        <div class="account-balance">¥${formatMoney(account.balance)}</div>
-                    </div>
-                `;
-            }).join('');
+            updateDashboard();
         }
-
-        function renderSummary() {
-            var currentMonth = new Date().toISOString().slice(0, 7);
+        
+        async function loadAccounts() {
+            try {
+                if (!_sb) return;
+                var { data, error } = await _sb.from('accounts').select('*');
+                if (error) throw error;
+                accounts = data || [];
+                
+                // Initialize default accounts if empty
+                if (accounts.length === 0) {
+                    await initDefaultAccounts();
+                }
+                
+                renderAccounts();
+                updateAccountSelects();
+            } catch (error) {
+                console.error('Load accounts error:', error);
+                // Use default accounts on error
+                accounts = defaultAccounts.map(function(a) { return { ...a }; });
+                renderAccounts();
+                updateAccountSelects();
+            }
+        }
+        
+        async function loadCategories() {
+            try {
+                if (!_sb) return;
+                var { data, error } = await _sb.from('categories').select('*');
+                if (error) throw error;
+                categories = data || [];
+                
+                // Initialize default categories if empty
+                if (categories.length === 0) {
+                    await initDefaultCategories();
+                }
+            } catch (error) {
+                console.error('Load categories error:', error);
+                categories = [...expenseCategories, ...incomeCategories];
+            }
+        }
+        
+        async function loadTransactions() {
+            try {
+                if (!_sb) return;
+                var { data, error } = await _sb.from('transactions').select('*').order('date', { ascending: false });
+                if (error) throw error;
+                transactions = data || [];
+            } catch (error) {
+                console.error('Load transactions error:', error);
+                transactions = [];
+            }
+        }
+        
+        async function loadBudgets() {
+            try {
+                if (!_sb) return;
+                var { data, error } = await _sb.from('budgets').select('*');
+                if (error) throw error;
+                budgets = data || [];
+            } catch (error) {
+                console.error('Load budgets error:', error);
+                budgets = [];
+            }
+        }
+        
+        async function loadLoans() {
+            try {
+                if (!_sb) return;
+                var { data, error } = await _sb.from('loans').select('*').order('date', { ascending: false });
+                if (error) throw error;
+                loans = data || [];
+            } catch (error) {
+                console.error('Load loans error:', error);
+                loans = [];
+            }
+        }
+        
+        async function loadRepayments() {
+            try {
+                if (!_sb) return;
+                var { data, error } = await _sb.from('repayments').select('*');
+                if (error) throw error;
+                repayments = data || [];
+            } catch (error) {
+                console.error('Load repayments error:', error);
+                repayments = [];
+            }
+        }
+        
+        // ============================================
+        // Data Initialization
+        // ============================================
+        async function initDefaultAccounts() {
+            try {
+                if (!_sb) return;
+                var { data, error } = await _sb.from('accounts').insert(defaultAccounts).select();
+                if (error) throw error;
+                accounts = data || defaultAccounts;
+            } catch (error) {
+                console.error('Init accounts error:', error);
+                accounts = defaultAccounts.map(function(a) { return { ...a }; });
+            }
+        }
+        
+        async function initDefaultCategories() {
+            try {
+                if (!_sb) return;
+                var allCategories = [...expenseCategories, ...incomeCategories];
+                var { data, error } = await _sb.from('categories').insert(allCategories).select();
+                if (error) throw error;
+                categories = data || allCategories;
+            } catch (error) {
+                console.error('Init categories error:', error);
+                categories = [...expenseCategories, ...incomeCategories];
+            }
+        }
+        
+        async function initDatabase() {
+            try {
+                showToast('正在初始化数据...', 'success');
+                await initDefaultAccounts();
+                await initDefaultCategories();
+                await loadAllData();
+                showToast('数据初始化完成', 'success');
+            } catch (error) {
+                console.error('Init database error:', error);
+                showToast('数据初始化失败', 'error');
+            }
+        }
+        
+        async function clearAllData() {
+            if (!confirm('确定要清空所有数据吗？此操作不可恢复！')) return;
+            
+            try {
+                if (!_sb) return;
+                
+                await _sb.from('transactions').delete().neq('id', 0);
+                await _sb.from('loans').delete().neq('id', 0);
+                await _sb.from('repayments').delete().neq('id', 0);
+                await _sb.from('budgets').delete().neq('id', 0);
+                
+                transactions = [];
+                loans = [];
+                repayments = [];
+                budgets = [];
+                
+                updateDashboard();
+                showToast('数据已清空', 'success');
+            } catch (error) {
+                console.error('Clear data error:', error);
+                showToast('清空数据失败', 'error');
+            }
+        }
+        
+        // ============================================
+        // Dashboard Updates
+        // ============================================
+        function updateDashboard() {
+            updateMonthlyOverview();
+            renderAccounts();
+            updateBudgetDisplay();
+            updateCharts();
+            renderTransactions();
+            renderLoans();
+        }
+        
+        function updateMonthlyOverview() {
             var monthTransactions = transactions.filter(function(t) {
                 return t.date && t.date.startsWith(currentMonth);
             });
-
+            
             var income = monthTransactions
                 .filter(function(t) { return t.type === 'income'; })
                 .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
-
+            
             var expense = monthTransactions
                 .filter(function(t) { return t.type === 'expense'; })
                 .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
-
-            var balance = income - expense;
-
-            document.getElementById('monthIncome').textContent = '¥' + formatMoney(income);
-            document.getElementById('monthExpense').textContent = '¥' + formatMoney(expense);
-            document.getElementById('monthBalance').textContent = '¥' + formatMoney(balance);
-        }
-
-        function renderBudget() {
-            var currentMonth = new Date().toISOString().slice(0, 7);
-            var budget = budgets.find(function(b) {
-                return b.period === 'monthly' && b.month === currentMonth;
-            });
-
-            var budgetSection = document.getElementById('budgetSection');
             
-            if (!budget || !budget.amount) {
-                budgetSection.style.display = 'none';
+            var balance = income - expense;
+            
+            animateNumber('monthIncome', income);
+            animateNumber('monthExpense', expense);
+            animateNumber('monthBalance', balance);
+        }
+        
+        function animateNumber(elementId, value) {
+            var element = document.getElementById(elementId);
+            var start = parseFloat(element.textContent.replace(/[^\d.-]/g, '')) || 0;
+            var end = value;
+            var duration = 500;
+            var startTime = null;
+            
+            function animate(currentTime) {
+                if (!startTime) startTime = currentTime;
+                var elapsed = currentTime - startTime;
+                var progress = Math.min(elapsed / duration, 1);
+                var easeProgress = 1 - Math.pow(1 - progress, 3);
+                var current = start + (end - start) * easeProgress;
+                
+                element.textContent = formatCurrency(current);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // ============================================
+        // Account Management
+        // ============================================
+        function renderAccounts() {
+            var grid = document.getElementById('accountsGrid');
+            
+            if (accounts.length === 0) {
+                grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💳</div><p>暂无账户</p></div>';
                 return;
             }
-
-            budgetSection.style.display = 'block';
-
+            
+            grid.innerHTML = accounts.map(function(account, index) {
+                return '<div class="account-card animate-fade-in stagger-' + Math.min(index + 1, 5) + '" onclick="selectAccount(\'' + account.id + '\')">' +
+                    '<div class="account-icon">' + (account.icon || '💳') + '</div>' +
+                    '<div class="account-name">' + account.name + '</div>' +
+                    '<div class="account-balance">' + formatCurrency(account.balance || 0) + '</div>' +
+                    '</div>';
+            }).join('');
+        }
+        
+        function updateAccountSelects() {
+            var fromSelect = document.getElementById('fromAccount');
+            var toSelect = document.getElementById('toAccount');
+            var loanAccount = document.getElementById('loanAccount');
+            var repaymentAccount = document.getElementById('repaymentAccount');
+            
+            var options = accounts.map(function(a) {
+                return '<option value="' + a.id + '">' + a.icon + ' ' + a.name + '</option>';
+            }).join('');
+            
+            if (fromSelect) fromSelect.innerHTML = options;
+            if (toSelect) toSelect.innerHTML = options;
+            if (loanAccount) loanAccount.innerHTML = options;
+            if (repaymentAccount) repaymentAccount.innerHTML = options;
+        }
+        
+        function selectAccount(accountId) {
+            document.querySelectorAll('.account-card').forEach(function(card) {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+        
+        // ============================================
+        // Transaction Modal
+        // ============================================
+        function openTransactionModal(type) {
+            document.getElementById('transactionType').value = type;
+            document.getElementById('transactionModalTitle').textContent = type === 'income' ? '记收入' : type === 'expense' ? '记支出' : '转账';
+            
+            var toAccountGroup = document.getElementById('toAccountGroup');
+            var fromAccountLabel = document.getElementById('fromAccountLabel');
+            
+            if (type === 'transfer') {
+                toAccountGroup.style.display = 'block';
+                fromAccountLabel.textContent = '转出账户';
+            } else {
+                toAccountGroup.style.display = 'none';
+                fromAccountLabel.textContent = '账户';
+            }
+            
+            renderCategoryGrid(type);
+            document.getElementById('transactionModal').classList.add('active');
+        }
+        
+        function renderCategoryGrid(type) {
+            var grid = document.getElementById('categoryGrid');
+            var cats = type === 'income' ? incomeCategories : expenseCategories;
+            
+            grid.innerHTML = cats.map(function(cat) {
+                return '<div class="category-item" onclick="selectCategory(this, \'' + cat.id + '\')" style="--cat-color: ' + cat.color + '">' +
+                    '<span class="icon">' + cat.icon + '</span>' +
+                    '<span class="name">' + cat.name + '</span>' +
+                    '</div>';
+            }).join('');
+        }
+        
+        function selectCategory(element, categoryId) {
+            document.querySelectorAll('.category-item').forEach(function(item) {
+                item.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            document.getElementById('selectedCategory').value = categoryId;
+        }
+        
+        async function saveTransaction() {
+            var type = document.getElementById('transactionType').value;
+            var amount = parseFloat(document.getElementById('transactionAmount').value);
+            var categoryId = document.getElementById('selectedCategory').value;
+            var fromAccountId = document.getElementById('fromAccount').value;
+            var toAccountId = document.getElementById('toAccount').value;
+            var date = document.getElementById('transactionDate').value;
+            var description = document.getElementById('transactionDescription').value;
+            
+            if (!amount || amount <= 0) {
+                showToast('请输入有效金额', 'error');
+                return;
+            }
+            
+            if (!categoryId && type !== 'transfer') {
+                showToast('请选择分类', 'error');
+                return;
+            }
+            
+            if (!fromAccountId) {
+                showToast('请选择账户', 'error');
+                return;
+            }
+            
+            if (type === 'transfer' && !toAccountId) {
+                showToast('请选择转入账户', 'error');
+                return;
+            }
+            
+            try {
+                var transaction = {
+                    type: type,
+                    amount: amount,
+                    category_id: categoryId || null,
+                    from_account_id: fromAccountId,
+                    to_account_id: type === 'transfer' ? toAccountId : null,
+                    date: date,
+                    description: description,
+                    created_at: new Date().toISOString()
+                };
+                
+                if (_sb) {
+                    var { error } = await _sb.from('transactions').insert(transaction);
+                    if (error) throw error;
+                }
+                
+                // Update account balances
+                await updateAccountBalance(fromAccountId, type === 'income' ? amount : -amount);
+                if (type === 'transfer') {
+                    await updateAccountBalance(toAccountId, amount);
+                    await updateAccountBalance(fromAccountId, -amount);
+                }
+                
+                transactions.unshift(transaction);
+                
+                closeModal('transactionModal');
+                document.getElementById('transactionForm').reset();
+                initDateInputs();
+                
+                updateDashboard();
+                showToast('记账成功', 'success');
+            } catch (error) {
+                console.error('Save transaction error:', error);
+                showToast('记账失败', 'error');
+            }
+        }
+        
+        async function updateAccountBalance(accountId, delta) {
+            try {
+                if (!_sb) return;
+                
+                var account = accounts.find(function(a) { return a.id === accountId; });
+                if (!account) return;
+                
+                var newBalance = (account.balance || 0) + delta;
+                
+                var { error } = await _sb.from('accounts')
+                    .update({ balance: newBalance })
+                    .eq('id', accountId);
+                
+                if (error) throw error;
+                
+                account.balance = newBalance;
+            } catch (error) {
+                console.error('Update balance error:', error);
+            }
+        }
+        
+        // ============================================
+        // Budget Management
+        // ============================================
+        function openBudgetModal() {
+            document.getElementById('budgetModal').classList.add('active');
+        }
+        
+        async function saveBudget() {
+            var amount = parseFloat(document.getElementById('budgetInput').value);
+            var month = document.getElementById('budgetMonth').value;
+            
+            if (!amount || amount < 0) {
+                showToast('请输入有效金额', 'error');
+                return;
+            }
+            
+            try {
+                var existing = budgets.find(function(b) { return b.month === month; });
+                
+                if (_sb) {
+                    if (existing) {
+                        var { error } = await _sb.from('budgets')
+                            .update({ amount: amount })
+                            .eq('id', existing.id);
+                        if (error) throw error;
+                        existing.amount = amount;
+                    } else {
+                        var { data, error } = await _sb.from('budgets')
+                            .insert({ month: month, amount: amount })
+                            .select();
+                        if (error) throw error;
+                        budgets.push(data[0]);
+                    }
+                }
+                
+                closeModal('budgetModal');
+                document.getElementById('budgetForm').reset();
+                initDateInputs();
+                
+                updateBudgetDisplay();
+                showToast('预算设置成功', 'success');
+            } catch (error) {
+                console.error('Save budget error:', error);
+                showToast('预算设置失败', 'error');
+            }
+        }
+        
+        function updateBudgetDisplay() {
+            var budget = budgets.find(function(b) { return b.month === currentMonth; });
+            var budgetAmount = budget ? budget.amount : 0;
+            
             var monthExpense = transactions
                 .filter(function(t) {
                     return t.type === 'expense' && t.date && t.date.startsWith(currentMonth);
                 })
                 .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
-
-            var percentage = Math.min((monthExpense / budget.amount) * 100, 100);
-            var progressFill = document.getElementById('budgetProgress');
             
-            progressFill.style.width = percentage + '%';
+            var remaining = Math.max(0, budgetAmount - monthExpense);
+            var percentage = budgetAmount > 0 ? (monthExpense / budgetAmount * 100) : 0;
+            
+            document.getElementById('budgetAmount').textContent = formatCurrency(budgetAmount);
+            document.getElementById('budgetSpent').textContent = formatCurrency(monthExpense);
+            document.getElementById('budgetRemaining').textContent = formatCurrency(remaining);
+            document.getElementById('budgetPercentage').textContent = '已使用 ' + percentage.toFixed(1) + '%';
+            
+            var progressFill = document.getElementById('budgetProgress');
+            progressFill.style.width = Math.min(percentage, 100) + '%';
             progressFill.className = 'progress-fill';
             
             if (percentage >= 100) {
@@ -1602,82 +2185,65 @@
             } else if (percentage >= 80) {
                 progressFill.classList.add('warning');
             }
-
-            document.getElementById('budgetStats').textContent = 
-                '已用 ¥' + formatMoney(monthExpense) + ' / ¥' + formatMoney(budget.amount);
         }
-
-        function renderCategoryGrid() {
-            var grid = document.getElementById('categoryGrid');
-            var cats = currentTransactionType === 'income' ? INCOME_CATEGORIES : 
-                      currentTransactionType === 'transfer' ? TRANSFER_CATEGORIES : 
-                      EXPENSE_CATEGORIES;
-
-            grid.innerHTML = cats.map(function(cat) {
-                var selected = selectedCategory === cat.id ? 'selected' : '';
-                return `
-                    <div class="category-option ${selected}" onclick="selectCategory('${cat.id}')">
-                        <span class="icon">${cat.icon}</span>
-                        <span class="name">${cat.name}</span>
-                    </div>
-                `;
-            }).join('');
+        
+        // ============================================
+        // Charts
+        // ============================================
+        function updateCharts() {
+            updateExpensePieChart();
+            updateTrendBarChart();
         }
-
-        function renderCharts() {
-            renderExpenseChart();
-            renderTrendChart();
-        }
-
-        function renderExpenseChart() {
-            var ctx = document.getElementById('expenseChart').getContext('2d');
-            var currentMonth = new Date().toISOString().slice(0, 7);
+        
+        function updateExpensePieChart() {
+            var canvas = document.getElementById('expensePieChart');
+            if (!canvas) return;
             
+            var ctx = canvas.getContext('2d');
+            
+            // Get expense data for current month
             var monthExpenses = transactions.filter(function(t) {
                 return t.type === 'expense' && t.date && t.date.startsWith(currentMonth);
             });
-
+            
             var categoryTotals = {};
             monthExpenses.forEach(function(t) {
-                var cat = t.category || 'other_expense';
-                categoryTotals[cat] = (categoryTotals[cat] || 0) + (parseFloat(t.amount) || 0);
+                var catId = t.category_id || 'other';
+                categoryTotals[catId] = (categoryTotals[catId] || 0) + (parseFloat(t.amount) || 0);
             });
-
+            
             var labels = [];
             var data = [];
             var colors = [];
-
+            
             Object.keys(categoryTotals).forEach(function(catId) {
-                var cat = EXPENSE_CATEGORIES.find(function(c) { return c.id === catId; }) || 
-                         { name: '其他', color: '#95a5a6' };
-                if (categoryTotals[catId] > 0) {
+                var cat = expenseCategories.find(function(c) { return c.id === catId; });
+                if (cat && categoryTotals[catId] > 0) {
                     labels.push(cat.name);
                     data.push(categoryTotals[catId]);
                     colors.push(cat.color);
                 }
             });
-
-            if (expenseChart) {
-                expenseChart.destroy();
-            }
-
+            
             if (data.length === 0) {
-                ctx.font = '14px "Noto Sans SC"';
-                ctx.fillStyle = '#9a9590';
-                ctx.textAlign = 'center';
-                ctx.fillText('暂无支出数据', ctx.canvas.width / 2, ctx.canvas.height / 2);
-                return;
+                labels = ['暂无数据'];
+                data = [1];
+                colors = ['#27272a'];
             }
-
-            expenseChart = new Chart(ctx, {
+            
+            if (expensePieChart) {
+                expensePieChart.destroy();
+            }
+            
+            expensePieChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
                     datasets: [{
                         data: data,
                         backgroundColor: colors,
-                        borderWidth: 2,
-                        borderColor: '#fff'
+                        borderWidth: 0,
+                        hoverOffset: 4
                     }]
                 },
                 options: {
@@ -1687,49 +2253,56 @@
                         legend: {
                             position: 'right',
                             labels: {
-                                font: { family: 'Noto Sans SC', size: 12 },
-                                padding: 15
+                                color: '#a1a1aa',
+                                font: { size: 11 },
+                                boxWidth: 12,
+                                padding: 8
                             }
                         }
-                    }
+                    },
+                    cutout: '60%'
                 }
             });
         }
-
-        function renderTrendChart() {
-            var ctx = document.getElementById('trendChart').getContext('2d');
+        
+        function updateTrendBarChart() {
+            var canvas = document.getElementById('trendBarChart');
+            if (!canvas) return;
             
+            var ctx = canvas.getContext('2d');
+            
+            // Get last 6 months data
             var months = [];
             var incomeData = [];
             var expenseData = [];
-
+            
             for (var i = 5; i >= 0; i--) {
                 var d = new Date();
                 d.setMonth(d.getMonth() - i);
                 var monthStr = d.toISOString().slice(0, 7);
-                months.push(d.getMonth() + 1 + '月');
-
+                months.push(monthStr.slice(5) + '月');
+                
                 var monthTrans = transactions.filter(function(t) {
                     return t.date && t.date.startsWith(monthStr);
                 });
-
-                var income = monthTrans
+                
+                var inc = monthTrans
                     .filter(function(t) { return t.type === 'income'; })
                     .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
-
-                var expense = monthTrans
+                
+                var exp = monthTrans
                     .filter(function(t) { return t.type === 'expense'; })
                     .reduce(function(sum, t) { return sum + (parseFloat(t.amount) || 0); }, 0);
-
-                incomeData.push(income);
-                expenseData.push(expense);
+                
+                incomeData.push(inc);
+                expenseData.push(exp);
             }
-
-            if (trendChart) {
-                trendChart.destroy();
+            
+            if (trendBarChart) {
+                trendBarChart.destroy();
             }
-
-            trendChart = new Chart(ctx, {
+            
+            trendBarChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: months,
@@ -1737,13 +2310,13 @@
                         {
                             label: '收入',
                             data: incomeData,
-                            backgroundColor: '#2d8a4e',
+                            backgroundColor: '#22c55e',
                             borderRadius: 4
                         },
                         {
                             label: '支出',
                             data: expenseData,
-                            backgroundColor: '#c4501a',
+                            backgroundColor: '#ef4444',
                             borderRadius: 4
                         }
                     ]
@@ -1753,640 +2326,396 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            labels: { font: { family: 'Noto Sans SC', size: 12 } }
+                            labels: {
+                                color: '#a1a1aa',
+                                font: { size: 12 }
+                            }
                         }
                     },
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                font: { family: 'Noto Sans SC', size: 11 },
-                                callback: function(value) {
-                                    return '¥' + (value / 1000).toFixed(0) + 'k';
-                                }
-                            }
-                        },
                         x: {
-                            ticks: { font: { family: 'Noto Sans SC', size: 12 } }
+                            ticks: { color: '#a1a1aa', font: { size: 11 } },
+                            grid: { display: false }
+                        },
+                        y: {
+                            ticks: { color: '#a1a1aa', font: { size: 11 } },
+                            grid: { color: '#27272a' }
                         }
                     }
                 }
             });
         }
-
-        function renderLoans() {
-            var loanStats = document.getElementById('loanStats');
-            var loanList = document.getElementById('loanList');
-
-            var totalPrincipal = 0;
-            var totalInterest = 0;
-            var totalRepaid = 0;
-
-            loans.forEach(function(loan) {
-                var loanRepayments = repayments.filter(function(r) { return r.loan_id === loan.id; });
-                var repaidPrincipal = loanRepayments
-                    .filter(function(r) { return r.type === 'principal' || r.type === 'both'; })
-                    .reduce(function(sum, r) { return sum + (parseFloat(r.amount) || 0); }, 0);
-                
-                var principal = parseFloat(loan.amount) || 0;
-                var days = Math.max(1, Math.floor((new Date() - new Date(loan.date)) / (1000 * 60 * 60 * 24)));
-                var rate = parseFloat(loan.interest_rate) || 17.64;
-                var interest = principal * (rate / 100) * (days / 365);
-
-                totalPrincipal += principal;
-                totalInterest += interest;
-                totalRepaid += repaidPrincipal;
-            });
-
-            var totalOwed = totalPrincipal + totalInterest - totalRepaid;
-
-            loanStats.innerHTML = `
-                <div class="loan-stat">
-                    <div class="loan-stat-value">¥${formatMoney(totalPrincipal)}</div>
-                    <div class="loan-stat-label">借款本金</div>
-                </div>
-                <div class="loan-stat">
-                    <div class="loan-stat-value">¥${formatMoney(totalInterest)}</div>
-                    <div class="loan-stat-label">累计利息</div>
-                </div>
-                <div class="loan-stat">
-                    <div class="loan-stat-value">¥${formatMoney(totalRepaid)}</div>
-                    <div class="loan-stat-label">已还金额</div>
-                </div>
-                <div class="loan-stat">
-                    <div class="loan-stat-value">¥${formatMoney(totalOwed)}</div>
-                    <div class="loan-stat-label">待还金额</div>
-                </div>
-            `;
-
-            if (loans.length === 0) {
-                loanList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">💳</div>
-                        <p>暂无借款记录</p>
-                    </div>
-                `;
-                return;
-            }
-
-            loanList.innerHTML = loans.slice(0, 5).map(function(loan, index) {
-                var loanRepayments = repayments.filter(function(r) { return r.loan_id === loan.id; });
-                var repaid = loanRepayments.reduce(function(sum, r) { return sum + (parseFloat(r.amount) || 0); }, 0);
-                var principal = parseFloat(loan.amount) || 0;
-                var days = Math.max(1, Math.floor((new Date() - new Date(loan.date)) / (1000 * 60 * 60 * 24)));
-                var rate = parseFloat(loan.interest_rate) || 17.64;
-                var interest = principal * (rate / 100) * (days / 365);
-                var remaining = principal + interest - repaid;
-
-                return `
-                    <div class="transaction-item" style="animation-delay: ${index * 0.05}s">
-                        <div class="transaction-icon expense">💳</div>
-                        <div class="transaction-info">
-                            <div class="transaction-category">${loan.borrower || '未知借款人'}</div>
-                            <div class="transaction-meta">
-                                <span>本金: ¥${formatMoney(principal)}</span>
-                                <span>利息: ¥${formatMoney(interest)}</span>
-                                <span>${loan.date}</span>
-                            </div>
-                        </div>
-                        <div class="transaction-amount expense">¥${formatMoney(remaining)}</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
+        
+        // ============================================
+        // Transaction List
+        // ============================================
         function renderTransactions() {
             var list = document.getElementById('transactionList');
-            var monthFilter = document.getElementById('monthFilter').value;
-            var accountFilter = currentAccountFilter;
-            var searchText = document.getElementById('searchInput').value.toLowerCase();
-
-            var filtered = transactions.filter(function(t) {
-                if (monthFilter && !t.date.startsWith(monthFilter)) return false;
-                if (accountFilter && t.from_account !== accountFilter && t.to_account !== accountFilter) return false;
-                if (searchText && t.note && !t.note.toLowerCase().includes(searchText)) return false;
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                list.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📝</div>
-                        <p>暂无交易记录</p>
-                    </div>
-                `;
+            
+            var monthTransactions = transactions.filter(function(t) {
+                return t.date && t.date.startsWith(currentMonth);
+            }).slice(0, 20);
+            
+            if (monthTransactions.length === 0) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>本月暂无交易记录</p></div>';
                 return;
             }
-
-            list.innerHTML = filtered.slice(0, 50).map(function(t, index) {
-                var cat = getCategory(t.category, t.type);
-                var fromAcc = accounts.find(function(a) { return a.id === t.from_account; });
-                var toAcc = accounts.find(function(a) { return a.id === t.to_account; });
+            
+            list.innerHTML = monthTransactions.map(function(t, index) {
+                var cat = categories.find(function(c) { return c.id === t.category_id; });
+                var account = accounts.find(function(a) { return a.id === t.from_account_id; });
+                var isIncome = t.type === 'income';
+                var isTransfer = t.type === 'transfer';
                 
-                var accountText = '';
-                if (t.type === 'transfer' && fromAcc && toAcc) {
-                    accountText = (fromAcc.name || fromAcc.type) + ' → ' + (toAcc.name || toAcc.type);
-                } else if (fromAcc) {
-                    accountText = fromAcc.name || fromAcc.type;
+                var icon = cat ? cat.icon : (isTransfer ? '🔄' : isIncome ? '💰' : '💸');
+                var bgColor = cat ? cat.color : (isTransfer ? '#6366f1' : isIncome ? '#22c55e' : '#ef4444');
+                
+                return '<div class="transaction-item animate-slide-in" style="animation-delay: ' + (index * 0.05) + 's">' +
+                    '<div class="transaction-icon" style="background: ' + bgColor + '20; color: ' + bgColor + '">' + icon + '</div>' +
+                    '<div class="transaction-info">' +
+                    '<div class="transaction-title">' + (t.description || (cat ? cat.name : t.type)) + '</div>' +
+                    '<div class="transaction-meta">' +
+                    '<span>' + (account ? account.name : '') + '</span>' +
+                    '<span>' + formatDate(t.date) + '</span>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="transaction-amount ' + (isIncome ? 'income' : 'expense') + '">' +
+                    (isIncome ? '+' : '-') + formatCurrency(t.amount) +
+                    '</div>' +
+                    '<div class="transaction-actions">' +
+                    '<button class="btn btn-icon" onclick="deleteTransaction(\'' + t.id + '\')" title="删除">🗑️</button>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+        }
+        
+        async function deleteTransaction(transactionId) {
+            if (!confirm('确定要删除这条记录吗？')) return;
+            
+            try {
+                if (_sb) {
+                    var { error } = await _sb.from('transactions').delete().eq('id', transactionId);
+                    if (error) throw error;
                 }
-
-                var amountClass = t.type === 'income' ? 'income' : t.type === 'expense' ? 'expense' : '';
-                var amountPrefix = t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '';
-
-                return `
-                    <div class="transaction-item" style="animation-delay: ${index * 0.03}s">
-                        <div class="transaction-icon ${t.type}">${cat.icon}</div>
-                        <div class="transaction-info">
-                            <div class="transaction-category">${cat.name}</div>
-                            <div class="transaction-meta">
-                                <span>${accountText}</span>
-                                <span>${t.date}</span>
-                                ${t.note ? '<span>' + t.note + '</span>' : ''}
-                            </div>
-                        </div>
-                        <div class="transaction-amount ${amountClass}">${amountPrefix}¥${formatMoney(t.amount)}</div>
-                        <div class="transaction-actions">
-                            <button class="btn btn-danger btn-small" onclick="deleteTransaction('${t.id}')">删除</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // ==========================================
-        // Helper Functions
-        // ==========================================
-        function formatMoney(amount) {
-            var num = parseFloat(amount) || 0;
-            return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        function getCategory(catId, type) {
-            var cats = type === 'income' ? INCOME_CATEGORIES : 
-                      type === 'transfer' ? TRANSFER_CATEGORIES : 
-                      EXPENSE_CATEGORIES;
-            return cats.find(function(c) { return c.id === catId; }) || 
-                   { name: '其他', icon: '📦', color: '#95a5a6' };
-        }
-
-        function updateSyncStatus(status) {
-            var el = document.getElementById('syncStatus');
-            el.className = 'sync-status ' + status;
-            
-            if (status === 'syncing') {
-                el.textContent = '同步中...';
-            } else if (status === 'synced') {
-                el.textContent = '已同步';
-            } else if (status === 'error') {
-                el.textContent = '同步失败';
-            }
-        }
-
-        function showToast(message, type) {
-            var container = document.getElementById('toastContainer');
-            var icons = { success: '✓', error: '✗', warning: '⚠' };
-            
-            var toast = document.createElement('div');
-            toast.className = 'toast ' + type;
-            toast.innerHTML = `
-                <span class="toast-icon">${icons[type] || 'ℹ'}</span>
-                <span class="toast-message">${message}</span>
-                <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
-            `;
-            
-            container.appendChild(toast);
-            
-            setTimeout(function() {
-                toast.remove();
-            }, 4000);
-        }
-
-        function setupMonthFilter() {
-            var select = document.getElementById('monthFilter');
-            var currentDate = new Date();
-            
-            for (var i = 0; i < 12; i++) {
-                var d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-                var value = d.toISOString().slice(0, 7);
-                var label = d.getFullYear() + '年' + (d.getMonth() + 1) + '月';
                 
-                var option = document.createElement('option');
-                option.value = value;
-                option.textContent = label;
-                select.appendChild(option);
+                transactions = transactions.filter(function(t) { return t.id !== transactionId; });
+                updateDashboard();
+                showToast('记录已删除', 'success');
+            } catch (error) {
+                console.error('Delete transaction error:', error);
+                showToast('删除失败', 'error');
             }
         }
-
-        function updateAccountFilter() {
-            var select = document.getElementById('accountFilter');
-            select.innerHTML = '<option value="">所有账户</option>';
+        
+        // ============================================
+        // Loan Management
+        // ============================================
+        function switchLoanTab(tab) {
+            currentLoanTab = tab;
             
-            accounts.forEach(function(account) {
-                var option = document.createElement('option');
-                option.value = account.id;
-                option.textContent = account.name || account.type;
-                select.appendChild(option);
+            document.querySelectorAll('.loan-tab').forEach(function(t) {
+                t.classList.remove('active');
             });
-        }
-
-        // ==========================================
-        // Event Handlers
-        // ==========================================
-        function selectAccount(accountId) {
-            if (currentAccountFilter === accountId) {
-                currentAccountFilter = '';
-            } else {
-                currentAccountFilter = accountId;
-            }
-            renderAccounts();
-            renderTransactions();
-        }
-
-        function filterByMonth() {
-            renderTransactions();
-        }
-
-        function filterByAccount() {
-            currentAccountFilter = document.getElementById('accountFilter').value;
-            renderAccounts();
-            renderTransactions();
-        }
-
-        function searchTransactions() {
-            renderTransactions();
-        }
-
-        function switchTransactionType(type) {
-            currentTransactionType = type;
-            selectedCategory = null;
+            event.target.classList.add('active');
             
-            // Update tabs
-            document.querySelectorAll('#transactionTabs .tab').forEach(function(tab) {
-                tab.classList.toggle('active', tab.dataset.type === type);
+            renderLoans();
+        }
+        
+        function renderLoans() {
+            var list = document.getElementById('loanList');
+            
+            var filteredLoans = loans.filter(function(l) {
+                if (currentLoanTab === 'history') {
+                    return l.status === 'completed';
+                }
+                return l.type === currentLoanTab && l.status !== 'completed';
             });
-
-            // Update labels and visibility
-            var fromLabel = document.getElementById('fromAccountLabel');
-            var toGroup = document.getElementById('toAccountGroup');
             
-            if (type === 'income') {
-                fromLabel.textContent = '存入账户';
-                toGroup.style.display = 'none';
-            } else if (type === 'expense') {
-                fromLabel.textContent = '支出账户';
-                toGroup.style.display = 'none';
-            } else {
-                fromLabel.textContent = '转出账户';
-                toGroup.style.display = 'block';
+            if (filteredLoans.length === 0) {
+                list.innerHTML = '<div class="empty-state" style="padding: 32px;"><div class="empty-state-icon">📋</div><p>暂无记录</p></div>';
+                return;
             }
-
-            renderCategoryGrid();
-        }
-
-        function selectCategory(catId) {
-            selectedCategory = catId;
-            renderCategoryGrid();
-        }
-
-        // ==========================================
-        // Modal Functions
-        // ==========================================
-        function openTransactionModal(type) {
-            currentTransactionType = type;
-            selectedCategory = null;
-            switchTransactionType(type);
             
-            // Populate account selects
-            var fromSelect = document.getElementById('fromAccount');
-            var toSelect = document.getElementById('toAccount');
-            
-            var options = accounts.map(function(a) {
-                return `<option value="${a.id}">${a.name || a.type}</option>`;
+            list.innerHTML = filteredLoans.map(function(loan) {
+                var loanRepayments = repayments.filter(function(r) { return r.loan_id === loan.id; });
+                var totalRepaid = loanRepayments.reduce(function(sum, r) { return sum + (parseFloat(r.amount) || 0); }, 0);
+                var remaining = (parseFloat(loan.amount) || 0) - totalRepaid;
+                var progress = loan.amount > 0 ? (totalRepaid / loan.amount * 100) : 0;
+                
+                var interestInfo = '';
+                if (loan.interest_rate > 0) {
+                    var days = Math.floor((new Date() - new Date(loan.date)) / (1000 * 60 * 60 * 24));
+                    var interest = loan.amount * (loan.interest_rate / 100) * (days / 365);
+                    interestInfo = ' | 预估利息: ' + formatCurrency(interest);
+                }
+                
+                return '<div class="loan-item">' +
+                    '<div class="loan-header">' +
+                    '<span class="loan-title">' + loan.person + '</span>' +
+                    '<span class="loan-amount">' + formatCurrency(loan.amount) + '</span>' +
+                    '</div>' +
+                    '<div class="loan-meta">' +
+                    '<span>借款日期: ' + formatDate(loan.date) + '</span>' +
+                    (loan.due_date ? '<span>还款期限: ' + formatDate(loan.due_date) + '</span>' : '') +
+                    (loan.interest_rate > 0 ? '<span>利率: ' + loan.interest_rate + '%</span>' : '') +
+                    interestInfo +
+                    '</div>' +
+                    '<div class="loan-progress">' +
+                    '<div class="loan-progress-bar">' +
+                    '<div class="loan-progress-fill" style="width: ' + progress + '%"></div>' +
+                    '</div>' +
+                    '<span class="loan-progress-text">' + progress.toFixed(0) + '%</span>' +
+                    '</div>' +
+                    '<div style="margin-top: 12px; display: flex; gap: 8px;">' +
+                    '<button class="btn btn-primary" onclick="openRepaymentModal(\'' + loan.id + '\')">还款</button>' +
+                    '<button class="btn btn-outline" onclick="viewRepayments(\'' + loan.id + '\')">查看记录</button>' +
+                    '</div>' +
+                    '</div>';
             }).join('');
-            
-            fromSelect.innerHTML = options;
-            toSelect.innerHTML = options;
-
-            // Set title
-            var titles = { income: '记收入', expense: '记支出', transfer: '转账' };
-            document.getElementById('transactionModalTitle').textContent = titles[type];
-
-            // Reset form
-            document.getElementById('transactionAmount').value = '';
-            document.getElementById('transactionNote').value = '';
-            document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
-
-            document.getElementById('transactionModal').classList.add('active');
         }
-
-        function openBudgetModal() {
-            var currentMonth = new Date().toISOString().slice(0, 7);
-            var budget = budgets.find(function(b) {
-                return b.period === 'monthly' && b.month === currentMonth;
-            });
-            
-            document.getElementById('totalBudget').value = budget ? budget.amount : '';
-            document.getElementById('budgetModal').classList.add('active');
-        }
-
+        
         function openLoanModal() {
-            document.getElementById('loanBorrower').value = '';
-            document.getElementById('loanAmount').value = '';
-            document.getElementById('loanNote').value = '';
-            document.getElementById('loanDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('loanModal').classList.add('active');
         }
-
-        function openRepaymentModal() {
-            var select = document.getElementById('repaymentLoan');
-            select.innerHTML = loans.map(function(l) {
-                return `<option value="${l.id}">${l.borrower || '未知'} - ¥${formatMoney(l.amount)}</option>`;
-            }).join('');
-            
-            document.getElementById('repaymentAmount').value = '';
-            document.getElementById('repaymentDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('repaymentModal').classList.add('active');
+        
+        function updateLoanType() {
+            var type = document.getElementById('loanTypeSelect').value;
+            document.getElementById('loanType').value = type;
+            document.getElementById('loanModalTitle').textContent = type === 'borrowed' ? '新增借款' : '新增借出';
         }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-        }
-
-        // ==========================================
-        // Save Functions
-        // ==========================================
-        async function saveTransaction() {
-            var amount = parseFloat(document.getElementById('transactionAmount').value);
-            var fromAccount = document.getElementById('fromAccount').value;
-            var toAccount = document.getElementById('toAccount').value;
-            var date = document.getElementById('transactionDate').value;
-            var note = document.getElementById('transactionNote').value;
-
-            if (!amount || amount <= 0) {
-                showToast('请输入有效金额', 'error');
-                return;
-            }
-
-            if (!selectedCategory && currentTransactionType !== 'transfer') {
-                showToast('请选择分类', 'error');
-                return;
-            }
-
-            if (!fromAccount) {
-                showToast('请选择账户', 'error');
-                return;
-            }
-
-            if (currentTransactionType === 'transfer' && !toAccount) {
-                showToast('请选择转入账户', 'error');
-                return;
-            }
-
-            updateSyncStatus('syncing');
-
-            try {
-                var transaction = {
-                    type: currentTransactionType,
-                    amount: amount,
-                    category: selectedCategory || 'transfer',
-                    from_account: fromAccount,
-                    to_account: currentTransactionType === 'transfer' ? toAccount : null,
-                    date: date,
-                    note: note,
-                    created_at: new Date().toISOString()
-                };
-
-                var result = await _sb.from('transactions').insert(transaction).select();
-                if (result.error) throw result.error;
-
-                // Update account balances
-                await updateAccountBalance(fromAccount, currentTransactionType === 'income' ? amount : -amount);
-                if (currentTransactionType === 'transfer') {
-                    await updateAccountBalance(toAccount, amount);
-                }
-
-                await loadTransactions();
-                await loadAccounts();
-                renderAll();
-                closeModal('transactionModal');
-                updateSyncStatus('synced');
-                showToast('交易已保存', 'success');
-            } catch (error) {
-                console.error('Error saving transaction:', error);
-                updateSyncStatus('error');
-                showToast('保存失败: ' + error.message, 'error');
-            }
-        }
-
-        async function updateAccountBalance(accountId, delta) {
-            var account = accounts.find(function(a) { return a.id === accountId; });
-            if (!account) return;
-
-            var newBalance = parseFloat(account.balance || 0) + delta;
-            var result = await _sb.from('accounts')
-                .update({ balance: newBalance, updated_at: new Date().toISOString() })
-                .eq('id', accountId);
-            
-            if (result.error) throw result.error;
-        }
-
-        async function saveBudget() {
-            var amount = parseFloat(document.getElementById('totalBudget').value);
-            var period = document.getElementById('budgetPeriod').value;
-            var currentMonth = new Date().toISOString().slice(0, 7);
-
-            if (!amount || amount <= 0) {
-                showToast('请输入有效预算金额', 'error');
-                return;
-            }
-
-            updateSyncStatus('syncing');
-
-            try {
-                var existing = budgets.find(function(b) {
-                    return b.period === period && b.month === currentMonth;
-                });
-
-                var budget = {
-                    amount: amount,
-                    period: period,
-                    month: currentMonth,
-                    updated_at: new Date().toISOString()
-                };
-
-                var result;
-                if (existing) {
-                    result = await _sb.from('budgets').update(budget).eq('id', existing.id);
-                } else {
-                    budget.created_at = new Date().toISOString();
-                    result = await _sb.from('budgets').insert(budget);
-                }
-
-                if (result.error) throw result.error;
-
-                await loadBudgets();
-                renderBudget();
-                closeModal('budgetModal');
-                updateSyncStatus('synced');
-                showToast('预算已保存', 'success');
-            } catch (error) {
-                console.error('Error saving budget:', error);
-                updateSyncStatus('error');
-                showToast('保存失败: ' + error.message, 'error');
-            }
-        }
-
+        
         async function saveLoan() {
-            var borrower = document.getElementById('loanBorrower').value.trim();
+            var type = document.getElementById('loanType').value;
+            var person = document.getElementById('loanPerson').value;
             var amount = parseFloat(document.getElementById('loanAmount').value);
+            var interestRate = parseFloat(document.getElementById('loanInterestRate').value) || 0;
             var date = document.getElementById('loanDate').value;
-            var rate = parseFloat(document.getElementById('loanRate').value);
-            var note = document.getElementById('loanNote').value.trim();
-
-            if (!borrower) {
-                showToast('请输入借款人姓名', 'error');
+            var dueDate = document.getElementById('loanDueDate').value;
+            var accountId = document.getElementById('loanAccount').value;
+            var description = document.getElementById('loanDescription').value;
+            
+            if (!person || !amount || !date || !accountId) {
+                showToast('请填写完整信息', 'error');
                 return;
             }
-
-            if (!amount || amount <= 0) {
-                showToast('请输入有效金额', 'error');
-                return;
-            }
-
-            updateSyncStatus('syncing');
-
+            
             try {
                 var loan = {
-                    borrower: borrower,
+                    type: type,
+                    person: person,
                     amount: amount,
+                    interest_rate: interestRate,
                     date: date,
-                    interest_rate: rate || 17.64,
-                    note: note,
+                    due_date: dueDate || null,
+                    account_id: accountId,
+                    description: description,
                     status: 'active',
                     created_at: new Date().toISOString()
                 };
-
-                var result = await _sb.from('loans').insert(loan).select();
-                if (result.error) throw result.error;
-
-                await loadLoans();
-                renderLoans();
+                
+                if (_sb) {
+                    var { data, error } = await _sb.from('loans').insert(loan).select();
+                    if (error) throw error;
+                    loans.unshift(data[0]);
+                } else {
+                    loan.id = Date.now().toString();
+                    loans.unshift(loan);
+                }
+                
+                // Update account balance
+                await updateAccountBalance(accountId, type === 'borrowed' ? amount : -amount);
+                
                 closeModal('loanModal');
-                updateSyncStatus('synced');
-                showToast('借款已记录', 'success');
+                document.getElementById('loanForm').reset();
+                initDateInputs();
+                
+                renderLoans();
+                renderAccounts();
+                showToast('借款记录已保存', 'success');
             } catch (error) {
-                console.error('Error saving loan:', error);
-                updateSyncStatus('error');
-                showToast('保存失败: ' + error.message, 'error');
+                console.error('Save loan error:', error);
+                showToast('保存失败', 'error');
             }
         }
-
+        
+        function openRepaymentModal(loanId) {
+            document.getElementById('repaymentLoanId').value = loanId;
+            document.getElementById('repaymentModal').classList.add('active');
+        }
+        
         async function saveRepayment() {
-            var loanId = document.getElementById('repaymentLoan').value;
+            var loanId = document.getElementById('repaymentLoanId').value;
             var amount = parseFloat(document.getElementById('repaymentAmount').value);
             var date = document.getElementById('repaymentDate').value;
-            var type = document.getElementById('repaymentType').value;
-
-            if (!loanId) {
-                showToast('请选择借款', 'error');
+            var accountId = document.getElementById('repaymentAccount').value;
+            var description = document.getElementById('repaymentDescription').value;
+            
+            if (!amount || !date || !accountId) {
+                showToast('请填写完整信息', 'error');
                 return;
             }
-
-            if (!amount || amount <= 0) {
-                showToast('请输入有效金额', 'error');
-                return;
-            }
-
-            updateSyncStatus('syncing');
-
+            
             try {
                 var repayment = {
                     loan_id: loanId,
                     amount: amount,
                     date: date,
-                    type: type,
+                    account_id: accountId,
+                    description: description,
                     created_at: new Date().toISOString()
                 };
-
-                var result = await _sb.from('repayments').insert(repayment);
-                if (result.error) throw result.error;
-
-                await loadRepayments();
-                renderLoans();
-                closeModal('repaymentModal');
-                updateSyncStatus('synced');
-                showToast('还款已记录', 'success');
-            } catch (error) {
-                console.error('Error saving repayment:', error);
-                updateSyncStatus('error');
-                showToast('保存失败: ' + error.message, 'error');
-            }
-        }
-
-        async function deleteTransaction(id) {
-            if (!confirm('确定要删除这条记录吗？')) return;
-
-            updateSyncStatus('syncing');
-
-            try {
-                var transaction = transactions.find(function(t) { return t.id === id; });
-                if (transaction) {
-                    // Revert account balance
-                    await updateAccountBalance(transaction.from_account, 
-                        transaction.type === 'income' ? -transaction.amount : transaction.amount);
-                    if (transaction.type === 'transfer' && transaction.to_account) {
-                        await updateAccountBalance(transaction.to_account, -transaction.amount);
-                    }
+                
+                if (_sb) {
+                    var { data, error } = await _sb.from('repayments').insert(repayment).select();
+                    if (error) throw error;
+                    repayments.push(data[0]);
+                } else {
+                    repayment.id = Date.now().toString();
+                    repayments.push(repayment);
                 }
-
-                var result = await _sb.from('transactions').delete().eq('id', id);
-                if (result.error) throw result.error;
-
-                await loadTransactions();
-                await loadAccounts();
-                renderAll();
-                updateSyncStatus('synced');
-                showToast('记录已删除', 'success');
+                
+                // Update account balance
+                var loan = loans.find(function(l) { return l.id === loanId; });
+                if (loan) {
+                    await updateAccountBalance(accountId, loan.type === 'borrowed' ? -amount : amount);
+                }
+                
+                // Check if loan is fully repaid
+                var loanRepayments = repayments.filter(function(r) { return r.loan_id === loanId; });
+                var totalRepaid = loanRepayments.reduce(function(sum, r) { return sum + (parseFloat(r.amount) || 0); }, 0);
+                
+                if (loan && totalRepaid >= loan.amount && _sb) {
+                    await _sb.from('loans').update({ status: 'completed' }).eq('id', loanId);
+                    loan.status = 'completed';
+                }
+                
+                closeModal('repaymentModal');
+                document.getElementById('repaymentForm').reset();
+                initDateInputs();
+                
+                renderLoans();
+                renderAccounts();
+                showToast('还款记录已保存', 'success');
             } catch (error) {
-                console.error('Error deleting transaction:', error);
-                updateSyncStatus('error');
-                showToast('删除失败: ' + error.message, 'error');
+                console.error('Save repayment error:', error);
+                showToast('保存失败', 'error');
             }
         }
-
-        // ==========================================
-        // Export Functions
-        // ==========================================
-        function exportToExcel() {
-            if (transactions.length === 0) {
-                showToast('没有数据可导出', 'warning');
+        
+        function viewRepayments(loanId) {
+            var loanRepayments = repayments.filter(function(r) { return r.loan_id === loanId; });
+            var loan = loans.find(function(l) { return l.id === loanId; });
+            
+            if (loanRepayments.length === 0) {
+                showToast('暂无还款记录', 'success');
                 return;
             }
-
-            var data = transactions.map(function(t) {
-                var cat = getCategory(t.category, t.type);
-                var fromAcc = accounts.find(function(a) { return a.id === t.from_account; });
-                return {
-                    '日期': t.date,
-                    '类型': t.type === 'income' ? '收入' : t.type === 'expense' ? '支出' : '转账',
-                    '分类': cat.name,
-                    '账户': fromAcc ? (fromAcc.name || fromAcc.type) : '',
-                    '金额': parseFloat(t.amount) || 0,
-                    '备注': t.note || ''
-                };
-            });
-
-            var ws = XLSX.utils.json_to_sheet(data);
-            var wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, '收支明细');
             
-            var filename = '个人记账_' + new Date().toISOString().slice(0, 10) + '.xlsx';
-            XLSX.writeFile(wb, filename);
+            var totalRepaid = loanRepayments.reduce(function(sum, r) { return sum + (parseFloat(r.amount) || 0); }, 0);
+            var message = '借款: ' + formatCurrency(loan.amount) + '\n已还: ' + formatCurrency(totalRepaid) + '\n\n还款记录:\n' +
+                loanRepayments.map(function(r) {
+                    return formatDate(r.date) + ' - ' + formatCurrency(r.amount);
+                }).join('\n');
             
-            showToast('Excel已导出', 'success');
+            alert(message);
         }
-
-        // Close modals on overlay click
+        
+        // ============================================
+        // Month Navigation
+        // ============================================
+        function changeMonth(delta) {
+            var parts = currentMonth.split('-');
+            var year = parseInt(parts[0]);
+            var month = parseInt(parts[1]);
+            
+            month += delta;
+            if (month > 12) {
+                month = 1;
+                year++;
+            } else if (month < 1) {
+                month = 12;
+                year--;
+            }
+            
+            currentMonth = year + '-' + String(month).padStart(2, '0');
+            updateMonthDisplay();
+            updateDashboard();
+        }
+        
+        function updateMonthDisplay() {
+            document.getElementById('currentMonthDisplay').textContent = currentMonth;
+        }
+        
+        // ============================================
+        // Export
+        // ============================================
+        function exportToExcel() {
+            try {
+                var wb = XLSX.utils.book_new();
+                
+                // Transactions sheet
+                var transData = transactions.map(function(t) {
+                    var cat = categories.find(function(c) { return c.id === t.category_id; });
+                    var account = accounts.find(function(a) { return a.id === t.from_account_id; });
+                    return {
+                        '日期': t.date,
+                        '类型': t.type === 'income' ? '收入' : t.type === 'expense' ? '支出' : '转账',
+                        '分类': cat ? cat.name : '',
+                        '账户': account ? account.name : '',
+                        '金额': t.amount,
+                        '备注': t.description || ''
+                    };
+                });
+                
+                var transWs = XLSX.utils.json_to_sheet(transData);
+                XLSX.utils.book_append_sheet(wb, transWs, '交易记录');
+                
+                // Accounts sheet
+                var accData = accounts.map(function(a) {
+                    return {
+                        '账户': a.name,
+                        '余额': a.balance || 0
+                    };
+                });
+                
+                var accWs = XLSX.utils.json_to_sheet(accData);
+                XLSX.utils.book_append_sheet(wb, accWs, '账户');
+                
+                // Loans sheet
+                var loanData = loans.map(function(l) {
+                    return {
+                        '类型': l.type === 'borrowed' ? '借入' : '借出',
+                        '对方': l.person,
+                        '金额': l.amount,
+                        '利率': l.interest_rate + '%',
+                        '日期': l.date,
+                        '状态': l.status === 'completed' ? '已还清' : '进行中'
+                    };
+                });
+                
+                var loanWs = XLSX.utils.json_to_sheet(loanData);
+                XLSX.utils.book_append_sheet(wb, loanWs, '贷款');
+                
+                XLSX.writeFile(wb, '个人记账数据_' + currentMonth + '.xlsx');
+                showToast('导出成功', 'success');
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('导出失败', 'error');
+            }
+        }
+        
+        // ============================================
+        // Modal Management
+        // ============================================
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        // Close modal on overlay click
         document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
             overlay.addEventListener('click', function(e) {
                 if (e.target === overlay) {
@@ -2394,6 +2723,57 @@
                 }
             });
         });
+        
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(function(modal) {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+        
+        // ============================================
+        // Toast Notifications
+        // ============================================
+        function showToast(message, type) {
+            var container = document.getElementById('toastContainer');
+            var toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            
+            var icon = type === 'success' ? '✓' : '✕';
+            var title = type === 'success' ? '成功' : '错误';
+            
+            toast.innerHTML = '<span class="toast-icon">' + icon + '</span>' +
+                '<div class="toast-content">' +
+                '<div class="toast-title">' + title + '</div>' +
+                '<div class="toast-message">' + message + '</div>' +
+                '</div>';
+            
+            container.appendChild(toast);
+            
+            setTimeout(function() {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(function() {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+        
+        // ============================================
+        // Utility Functions
+        // ============================================
+        function formatCurrency(amount) {
+            var num = parseFloat(amount) || 0;
+            return '¥' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            var d = new Date(dateStr);
+            return d.toLocaleDateString('zh-CN');
+        }
     </script>
 </body>
 </html>
