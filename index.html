@@ -28,6 +28,8 @@
   --radius-xs: 7px;
   --shadow: 0 4px 24px rgba(0,0,0,0.3);
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --spring: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-smooth: 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 html { font-size: 16px; -webkit-font-smoothing: antialiased; }
 body {
@@ -40,6 +42,30 @@ body {
 }
 .mono { font-family: 'JetBrains Mono', monospace; }
 
+/* ========== Interactive Animation Base ========== */
+/* Ripple effect container */
+.ripple-container { position: relative; overflow: hidden; }
+.ripple {
+  position: absolute; border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  transform: scale(0);
+  animation: rippleAnim 0.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes rippleAnim {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* Click scale feedback for all buttons */
+button, .cat-item, .acc-select-item, .account-chip, .tx-item, .budget-item, .loan-item {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--spring-smooth), border-color var(--transition), background var(--transition), box-shadow var(--transition), opacity var(--transition);
+}
+button:active:not(:disabled), .cat-item:active, .acc-select-item:active {
+  transform: scale(0.95);
+}
+button:disabled { pointer-events: none; }
+
 /* ========== Background Blobs ========== */
 .bg-blobs {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -47,6 +73,7 @@ body {
 }
 .blob {
   position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.15;
+  animation: blobFloat 20s ease-in-out infinite alternate;
 }
 .blob-1 {
   width: 600px; height: 600px; top: -200px; right: -150px;
@@ -55,12 +82,20 @@ body {
 .blob-2 {
   width: 500px; height: 500px; bottom: -100px; left: -100px;
   background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  animation-delay: -7s;
 }
 .blob-3 {
   width: 300px; height: 300px; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
   opacity: 0.05;
+  animation-delay: -14s;
+}
+@keyframes blobFloat {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.95); }
+  100% { transform: translate(10px, -10px) scale(1.02); }
 }
 
 /* ========== Layout ========== */
@@ -73,7 +108,8 @@ body {
 /* ========== Header ========== */
 .header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 0 20px; animation: fadeUp 0.5s ease both;
+  padding: 12px 0 20px;
+  animation: fadeSlideDown 0.5s var(--spring-smooth) both;
 }
 .header-title {
   font-size: 1.35rem; font-weight: 700;
@@ -89,19 +125,26 @@ body {
 .month-nav button {
   background: none; border: none; color: var(--text-secondary);
   cursor: pointer; font-size: 14px; padding: 2px 4px;
-  transition: color var(--transition);
+  transition: color var(--transition), transform var(--spring-smooth);
+  border-radius: 50%; width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
 }
 .month-nav button:hover { color: var(--primary); }
+.month-nav button:active { transform: scale(0.85); }
 .month-nav span {
   font-size: 0.82rem; font-weight: 600; color: var(--text);
   min-width: 80px; text-align: center;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.month-nav span.switching {
+  opacity: 0; transform: translateY(-4px);
 }
 
 /* ========== Cards ========== */
 .card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 18px;
-  transition: border-color var(--transition), background var(--transition);
+  transition: border-color var(--transition), background var(--transition), transform var(--spring-smooth);
 }
 .card:hover { border-color: var(--border-hover); }
 
@@ -113,13 +156,19 @@ body {
 .summary-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px 12px;
-  text-align: center; transition: border-color var(--transition);
-  animation: fadeUp 0.5s ease both;
+  text-align: center;
+  animation: fadeSlideUp 0.5s var(--spring-smooth) both;
+  transition: border-color var(--transition), transform var(--spring-smooth), box-shadow var(--transition);
+  cursor: default;
 }
 .summary-card:nth-child(1) { animation-delay: 0.05s; }
 .summary-card:nth-child(2) { animation-delay: 0.13s; }
 .summary-card:nth-child(3) { animation-delay: 0.21s; }
-.summary-card:hover { border-color: var(--border-hover); }
+.summary-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
 .summary-label {
   font-size: 0.7rem; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: 0.5px;
@@ -128,30 +177,43 @@ body {
 .summary-amount {
   font-family: 'JetBrains Mono', monospace;
   font-size: 1.05rem; font-weight: 700;
+  transition: transform 0.3s;
 }
 .summary-amount.income { color: var(--success); }
 .summary-amount.expense { color: var(--danger); }
 .summary-amount.balance { color: var(--primary); }
+.summary-amount.counting {
+  animation: countPulse 0.3s ease;
+}
+@keyframes countPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
 
 /* ========== Quick Actions ========== */
 .quick-actions {
   display: flex; gap: 8px; margin-bottom: 16px;
-  animation: fadeUp 0.5s ease 0.1s both;
+  animation: fadeSlideUp 0.5s var(--spring-smooth) 0.1s both;
 }
 .btn-add {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 12px 16px; border: none; border-radius: var(--radius-sm);
   font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 600;
-  cursor: pointer; transition: all var(--transition);
-  color: #fff;
+  cursor: pointer; color: #fff;
+  position: relative; overflow: hidden;
 }
 .btn-add.primary {
   background: linear-gradient(135deg, var(--primary), #6366f1);
   box-shadow: 0 4px 16px rgba(59,130,246,0.25);
 }
 .btn-add.primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(59,130,246,0.35);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 28px rgba(59,130,246,0.4);
+}
+.btn-add.primary:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 2px 8px rgba(59,130,246,0.2);
 }
 .btn-add.secondary {
   background: var(--card); border: 1px solid var(--border);
@@ -159,14 +221,18 @@ body {
 }
 .btn-add.secondary:hover {
   border-color: var(--border-hover); color: var(--text);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.btn-add.secondary:active {
+  transform: translateY(0) scale(0.97);
 }
 .btn-add .icon { font-size: 1.1rem; }
 
 /* ========== Section ========== */
 .section {
   margin-bottom: 16px;
-  animation: fadeUp 0.5s ease both;
+  animation: fadeSlideUp 0.5s var(--spring-smooth) both;
 }
 .section:nth-child(5) { animation-delay: 0.15s; }
 .section:nth-child(6) { animation-delay: 0.23s; }
@@ -183,9 +249,11 @@ body {
 .section-action {
   font-size: 0.75rem; color: var(--primary); cursor: pointer;
   background: none; border: none; font-family: 'Inter', sans-serif;
-  font-weight: 500; transition: color var(--transition);
+  font-weight: 500; transition: color var(--transition), transform var(--spring-smooth);
+  padding: 4px 8px; border-radius: 6px;
 }
-.section-action:hover { color: var(--primary-hover); }
+.section-action:hover { color: var(--primary-hover); background: rgba(59,130,246,0.08); }
+.section-action:active { transform: scale(0.92); }
 
 /* ========== Accounts ========== */
 .accounts-scroll {
@@ -197,16 +265,24 @@ body {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 14px; border-radius: 20px;
   background: var(--card); border: 1px solid var(--border);
-  white-space: nowrap; cursor: default;
-  transition: border-color var(--transition);
+  white-space: nowrap; cursor: default; flex-shrink: 0;
   font-size: 0.78rem; font-weight: 500;
+  animation: chipSlideIn 0.4s var(--spring-smooth) both;
 }
-.account-chip:hover { border-color: var(--border-hover); }
+.account-chip:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 .account-chip .acc-icon { font-size: 1rem; }
 .account-chip .acc-balance {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem; color: var(--text-secondary);
   margin-left: 2px;
+}
+@keyframes chipSlideIn {
+  from { opacity: 0; transform: translateX(-12px) scale(0.9); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 /* ========== Charts ========== */
@@ -216,18 +292,23 @@ body {
 .chart-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), transform var(--spring-smooth), box-shadow var(--transition);
+  overflow: hidden;
 }
-.chart-card:hover { border-color: var(--border-hover); }
+.chart-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
 .chart-title {
   font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);
   margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.3px;
 }
-.chart-wrap { position: relative; width: 100%; }
-.chart-wrap canvas { width: 100% !important; }
+.chart-wrap { position: relative; width: 100%; height: 160px; }
+.chart-wrap canvas { width: 100% !important; height: 100% !important; }
 .chart-empty {
   display: flex; align-items: center; justify-content: center;
-  height: 140px; color: var(--text-muted); font-size: 0.8rem;
+  height: 160px; color: var(--text-muted); font-size: 0.8rem;
 }
 
 /* ========== Transaction List ========== */
@@ -236,15 +317,31 @@ body {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 14px; border-radius: var(--radius-sm);
   background: var(--card); border: 1px solid var(--border);
-  transition: border-color var(--transition);
   cursor: default;
+  animation: txSlideIn 0.35s var(--spring-smooth) both;
 }
-.tx-item:hover { border-color: var(--border-hover); }
+.tx-item:hover {
+  border-color: var(--border-hover);
+  transform: translateX(4px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.tx-item.removing {
+  animation: txSlideOut 0.3s ease forwards;
+}
+@keyframes txSlideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes txSlideOut {
+  to { opacity: 0; transform: translateX(40px) scale(0.95); height: 0; padding: 0; margin: 0; overflow: hidden; }
+}
 .tx-icon {
   width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.1rem; flex-shrink: 0;
+  transition: transform var(--spring-smooth);
 }
+.tx-item:hover .tx-icon { transform: scale(1.1) rotate(-5deg); }
 .tx-info { flex: 1; min-width: 0; }
 .tx-cat {
   font-size: 0.82rem; font-weight: 600; color: var(--text);
@@ -259,7 +356,9 @@ body {
 .tx-amount {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.88rem; font-weight: 700;
+  transition: transform var(--spring-smooth);
 }
+.tx-item:hover .tx-amount { transform: scale(1.05); }
 .tx-amount.income { color: var(--success); }
 .tx-amount.expense { color: var(--danger); }
 .tx-amount.transfer { color: var(--primary); }
@@ -269,11 +368,13 @@ body {
 .tx-del {
   background: none; border: none; color: var(--text-muted);
   cursor: pointer; font-size: 0.85rem; padding: 4px;
-  border-radius: 6px; transition: all var(--transition);
-  flex-shrink: 0; opacity: 0;
+  border-radius: 6px; flex-shrink: 0;
+  opacity: 0;
+  transition: all var(--spring-smooth);
 }
 .tx-item:hover .tx-del { opacity: 1; }
-.tx-del:hover { color: var(--danger); background: rgba(244,63,94,0.1); }
+.tx-del:hover { color: var(--danger); background: rgba(244,63,94,0.1); transform: scale(1.15); }
+.tx-del:active { transform: scale(0.9); }
 .tx-empty {
   text-align: center; padding: 30px; color: var(--text-muted);
   font-size: 0.82rem;
@@ -284,16 +385,18 @@ body {
 .budget-item {
   padding: 12px 14px; border-radius: var(--radius-sm);
   background: var(--card); border: 1px solid var(--border);
-  transition: border-color var(--transition);
+  animation: fadeSlideUp 0.35s var(--spring-smooth) both;
 }
-.budget-item:hover { border-color: var(--border-hover); }
+.budget-item:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
 .budget-top {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 8px;
 }
-.budget-name {
-  font-size: 0.82rem; font-weight: 600;
-}
+.budget-name { font-size: 0.82rem; font-weight: 600; }
 .budget-vals {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem; color: var(--text-secondary);
@@ -305,11 +408,12 @@ body {
 }
 .progress-fill {
   height: 100%; border-radius: 3px;
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 0;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.progress-fill.safe { background: var(--success); }
-.progress-fill.warn { background: var(--warning); }
-.progress-fill.danger { background: var(--danger); }
+.progress-fill.safe { background: linear-gradient(90deg, var(--success), #34d399); }
+.progress-fill.warn { background: linear-gradient(90deg, var(--warning), #fbbf24); }
+.progress-fill.danger { background: linear-gradient(90deg, var(--danger), #fb7185); }
 .budget-empty {
   text-align: center; padding: 20px; color: var(--text-muted);
   font-size: 0.82rem;
@@ -320,9 +424,13 @@ body {
 .loan-item {
   padding: 12px 14px; border-radius: var(--radius-sm);
   background: var(--card); border: 1px solid var(--border);
-  transition: border-color var(--transition);
+  animation: fadeSlideUp 0.35s var(--spring-smooth) both;
 }
-.loan-item:hover { border-color: var(--border-hover); }
+.loan-item:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
 .loan-top {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 4px;
@@ -334,7 +442,7 @@ body {
 }
 .loan-meta {
   font-size: 0.7rem; color: var(--text-secondary);
-  display: flex; gap: 12px;
+  display: flex; gap: 12px; flex-wrap: wrap;
 }
 .loan-actions {
   display: flex; gap: 6px; margin-top: 8px;
@@ -343,10 +451,11 @@ body {
   padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
   background: none; color: var(--text-secondary); font-size: 0.72rem;
   font-family: 'Inter', sans-serif; font-weight: 500;
-  cursor: pointer; transition: all var(--transition);
+  cursor: pointer;
 }
-.loan-btn:hover { border-color: var(--border-hover); color: var(--text); }
-.loan-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+.loan-btn:hover { border-color: var(--border-hover); color: var(--text); background: rgba(255,255,255,0.03); }
+.loan-btn:active { transform: scale(0.93); }
+.loan-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(244,63,94,0.08); }
 .loan-empty {
   text-align: center; padding: 20px; color: var(--text-muted);
   font-size: 0.82rem;
@@ -354,22 +463,34 @@ body {
 
 /* ========== Modal ========== */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-  backdrop-filter: blur(4px); z-index: 100;
-  display: none; align-items: flex-end; justify-content: center;
-  animation: fadeIn 0.2s ease;
+  position: fixed; inset: 0; background: rgba(0,0,0,0);
+  backdrop-filter: blur(0px);
+  z-index: 100;
+  display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none;
+  transition: background 0.3s ease, backdrop-filter 0.3s ease;
 }
-.modal-overlay.active { display: flex; }
+.modal-overlay.active {
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
 .modal {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 20px 20px 0 0; width: 100%; max-width: 520px;
   max-height: 85vh; overflow-y: auto; padding: 0;
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.modal-overlay.active .modal {
+  transform: translateY(0);
 }
 .modal-handle {
   width: 36px; height: 4px; background: var(--border);
   border-radius: 2px; margin: 10px auto 0;
+  transition: background var(--transition);
 }
+.modal-overlay.active .modal-handle { background: var(--text-muted); }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px 12px;
@@ -380,30 +501,38 @@ body {
   background: var(--border); border: none; color: var(--text-secondary);
   font-size: 1rem; cursor: pointer; display: flex;
   align-items: center; justify-content: center;
-  transition: all var(--transition);
 }
-.modal-close:hover { background: var(--danger); color: #fff; }
+.modal-close:hover { background: var(--danger); color: #fff; transform: rotate(90deg); }
+.modal-close:active { transform: rotate(90deg) scale(0.9); }
 .modal-body { padding: 0 20px 24px; }
 
 /* ========== Form Elements ========== */
 .type-tabs {
   display: flex; gap: 6px; margin-bottom: 16px;
   background: var(--bg); border-radius: var(--radius-sm); padding: 4px;
+  position: relative;
 }
 .type-tab {
   flex: 1; padding: 8px; border: none; border-radius: var(--radius-xs);
   background: transparent; color: var(--text-secondary);
   font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600;
-  cursor: pointer; transition: all var(--transition);
+  cursor: pointer; position: relative; z-index: 1;
 }
 .type-tab.active.expense-tab {
-  background: rgba(244,63,94,0.15); color: var(--danger);
+  color: var(--danger);
 }
 .type-tab.active.income-tab {
-  background: rgba(16,185,129,0.15); color: var(--success);
+  color: var(--success);
 }
 .type-tab.active.transfer-tab {
-  background: rgba(59,130,246,0.15); color: var(--primary);
+  color: var(--primary);
+}
+/* Sliding indicator behind active tab */
+.type-tab-indicator {
+  position: absolute; top: 4px; bottom: 4px;
+  border-radius: var(--radius-xs);
+  transition: left 0.35s cubic-bezier(0.22, 1, 0.36, 1), width 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s;
+  z-index: 0;
 }
 
 .form-group { margin-bottom: 14px; }
@@ -416,10 +545,13 @@ body {
   width: 100%; padding: 10px 14px; border-radius: var(--radius-xs);
   border: 1px solid var(--border); background: var(--bg);
   color: var(--text); font-family: 'Inter', sans-serif;
-  font-size: 0.88rem; transition: border-color var(--transition);
+  font-size: 0.88rem; transition: border-color var(--transition), box-shadow var(--transition);
   outline: none;
 }
-.form-input:focus { border-color: var(--primary); }
+.form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
 .form-input.mono {
   font-family: 'JetBrains Mono', monospace;
   font-size: 1.4rem; font-weight: 700;
@@ -434,21 +566,24 @@ body {
 .cat-item {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   padding: 10px 4px; border-radius: var(--radius-sm);
-  border: 1px solid transparent; cursor: pointer;
-  transition: all var(--transition); background: none;
-  font-family: 'Inter', sans-serif;
+  border: 2px solid transparent; cursor: pointer;
+  background: none; font-family: 'Inter', sans-serif;
 }
 .cat-item:hover { background: rgba(255,255,255,0.03); }
 .cat-item.selected {
   border-color: var(--primary);
   background: rgba(59,130,246,0.08);
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.2);
 }
-.cat-item .cat-icon { font-size: 1.3rem; }
+.cat-item .cat-icon { font-size: 1.3rem; transition: transform var(--spring-smooth); }
+.cat-item.selected .cat-icon { transform: scale(1.2); }
 .cat-item .cat-name {
   font-size: 0.62rem; color: var(--text-secondary);
   font-weight: 500; text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 100%;
+  transition: color var(--transition);
 }
 .cat-item.selected .cat-name { color: var(--primary); }
 
@@ -459,19 +594,22 @@ body {
 .acc-select-item {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   padding: 10px 4px; border-radius: var(--radius-sm);
-  border: 1px solid transparent; cursor: pointer;
-  transition: all var(--transition); background: none;
-  font-family: 'Inter', sans-serif;
+  border: 2px solid transparent; cursor: pointer;
+  background: none; font-family: 'Inter', sans-serif;
 }
 .acc-select-item:hover { background: rgba(255,255,255,0.03); }
 .acc-select-item.selected {
   border-color: var(--primary);
   background: rgba(59,130,246,0.08);
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.2);
 }
-.acc-select-item .acc-icon { font-size: 1.2rem; }
+.acc-select-item .acc-icon { font-size: 1.2rem; transition: transform var(--spring-smooth); }
+.acc-select-item.selected .acc-icon { transform: scale(1.2); }
 .acc-select-item .acc-name {
   font-size: 0.68rem; color: var(--text-secondary);
   font-weight: 500;
+  transition: color var(--transition);
 }
 .acc-select-item.selected .acc-name { color: var(--primary); }
 
@@ -480,15 +618,18 @@ body {
   background: linear-gradient(135deg, var(--primary), #6366f1);
   color: #fff; font-family: 'Inter', sans-serif;
   font-size: 0.9rem; font-weight: 700; cursor: pointer;
-  transition: all var(--transition);
   box-shadow: 0 4px 16px rgba(59,130,246,0.25);
   margin-top: 6px;
+  position: relative; overflow: hidden;
 }
 .btn-submit:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(59,130,246,0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(59,130,246,0.4);
 }
-.btn-submit:active { transform: translateY(0); }
+.btn-submit:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(59,130,246,0.2);
+}
 .btn-submit:disabled {
   opacity: 0.5; cursor: not-allowed; transform: none;
   box-shadow: none;
@@ -513,33 +654,40 @@ body {
 .toast {
   padding: 10px 20px; border-radius: var(--radius-sm);
   font-size: 0.82rem; font-weight: 500;
-  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards;
   pointer-events: auto; white-space: nowrap;
+  animation: toastSlideIn 0.4s var(--spring-smooth) both;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
-.toast.success { background: rgba(16,185,129,0.9); color: #fff; }
-.toast.error { background: rgba(244,63,94,0.9); color: #fff; }
-.toast.info { background: rgba(59,130,246,0.9); color: #fff; }
+.toast.removing {
+  animation: toastSlideOut 0.3s ease forwards;
+}
+.toast.success { background: rgba(16,185,129,0.95); color: #fff; }
+.toast.error { background: rgba(244,63,94,0.95); color: #fff; }
+.toast.info { background: rgba(59,130,246,0.95); color: #fff; }
 
 /* ========== Animations ========== */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateY(-20px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-@keyframes toastIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes toastSlideOut {
+  to { opacity: 0; transform: translateY(-10px) scale(0.9); }
 }
-@keyframes toastOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* ========== Scrollbar ========== */
@@ -560,15 +708,21 @@ body {
   border: 1px solid var(--border); background: none;
   color: var(--text-secondary); font-size: 0.72rem;
   font-family: 'Inter', sans-serif; font-weight: 500;
-  cursor: pointer; transition: all var(--transition);
+  cursor: pointer;
 }
-.btn-export:hover { border-color: var(--border-hover); color: var(--text); }
+.btn-export:hover { border-color: var(--border-hover); color: var(--text); background: rgba(255,255,255,0.03); }
+.btn-export:active { transform: scale(0.93); }
 
 /* ========== Transfer fields ========== */
 .transfer-fields { display: flex; flex-direction: column; gap: 10px; }
 .transfer-arrow {
   text-align: center; color: var(--primary); font-size: 1.2rem;
   padding: 4px 0;
+  animation: arrowBounce 1.5s ease-in-out infinite;
+}
+@keyframes arrowBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
 }
 
 /* ========== Loading ========== */
@@ -587,9 +741,31 @@ body {
     linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
   background-size: 60px 60px;
 }
+
+/* ========== Page transition flash ========== */
+.page-flash {
+  position: fixed; inset: 0; z-index: 999;
+  background: var(--primary);
+  pointer-events: none;
+  animation: pageFlash 0.5s ease forwards;
+}
+@keyframes pageFlash {
+  0% { opacity: 0.3; }
+  100% { opacity: 0; }
+}
+
+/* ========== Success checkmark animation ========== */
+@keyframes successPop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
 </style>
 </head>
 <body>
+
+<!-- Page Load Flash -->
+<div class="page-flash"></div>
 
 <!-- Background Effects -->
 <div class="bg-grid"></div>
@@ -610,7 +786,7 @@ body {
     <div class="header-title">&#x1F4B0; 个人记账</div>
     <div class="month-nav">
       <button onclick="changeMonth(-1)">&#9664;</button>
-      <span id="monthLabel">2025年1月</span>
+      <span id="monthLabel">加载中...</span>
       <button onclick="changeMonth(1)">&#9654;</button>
     </div>
   </div>
@@ -717,7 +893,8 @@ body {
     </div>
     <div class="modal-body">
       <!-- Type Tabs -->
-      <div class="type-tabs">
+      <div class="type-tabs" id="typeTabs">
+        <div class="type-tab-indicator" id="typeTabIndicator"></div>
         <button class="type-tab expense-tab active" id="tabExpense" onclick="switchType('expense')">支出</button>
         <button class="type-tab income-tab" id="tabIncome" onclick="switchType('income')">收入</button>
         <button class="type-tab transfer-tab" id="tabTransfer" onclick="switchType('transfer')">转账</button>
@@ -732,17 +909,13 @@ body {
       <!-- Category (for expense/income) -->
       <div class="form-group" id="catGroup">
         <label class="form-label">分类</label>
-        <div class="cat-grid" id="catGrid">
-          <!-- filled by JS -->
-        </div>
+        <div class="cat-grid" id="catGrid"></div>
       </div>
 
       <!-- Account (for expense/income) -->
       <div class="form-group" id="accGroup">
         <label class="form-label">账户</label>
-        <div class="account-select-grid" id="accGrid">
-          <!-- filled by JS -->
-        </div>
+        <div class="account-select-grid" id="accGrid"></div>
       </div>
 
       <!-- Transfer fields -->
@@ -798,9 +971,7 @@ body {
         </div>
         <div class="form-group">
           <label class="form-label">分类</label>
-          <select class="form-input" id="budgetCat">
-            <!-- filled by JS -->
-          </select>
+          <select class="form-input" id="budgetCat"></select>
         </div>
       </div>
       <div class="budget-form-grid">
@@ -884,11 +1055,10 @@ body {
 // ============================================================
 //  全局状态
 // ============================================================
-var _sb = null;                   // Supabase 客户端
+var _sb = null;
 var currentYear = new Date().getFullYear();
-var currentMonth = new Date().getMonth() + 1; // 1-12
+var currentMonth = new Date().getMonth() + 1;
 
-// 数据缓存
 var allAccounts = [];
 var allCategories = [];
 var allTransactions = [];
@@ -896,16 +1066,87 @@ var allBudgets = [];
 var allLoans = [];
 var allRepayments = [];
 
-// 当前表单状态
 var selectedType = 'expense';
 var selectedCatId = null;
 var selectedAccId = null;
 var selectedFromAccId = null;
 var selectedToAccId = null;
 
-// Chart 实例
 var pieChart = null;
 var barChart = null;
+
+// ============================================================
+//  Ripple Effect
+// ============================================================
+document.addEventListener('click', function(e) {
+  var target = e.target.closest('button, .btn-add, .btn-submit, .btn-export, .section-action, .loan-btn');
+  if (!target) return;
+  var rect = target.getBoundingClientRect();
+  var ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  var size = Math.max(rect.width, rect.height);
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+  ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+  target.style.position = target.style.position || 'relative';
+  target.style.overflow = 'hidden';
+  target.appendChild(ripple);
+  setTimeout(function() { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 600);
+});
+
+// ============================================================
+//  Animated Number Counter
+// ============================================================
+function animateNumber(el, targetText, prefix) {
+  prefix = prefix || '¥';
+  var targetNum = parseFloat(targetText.replace(/[^0-9.-]/g, '')) || 0;
+  var currentNum = parseFloat(el.textContent.replace(/[^0-9.-]/g, '')) || 0;
+  var diff = targetNum - currentNum;
+  if (Math.abs(diff) < 0.01) {
+    el.textContent = prefix + formatNum(targetNum);
+    return;
+  }
+  var duration = 500;
+  var startTime = null;
+  el.classList.add('counting');
+  function step(timestamp) {
+    if (!startTime) startTime = timestamp;
+    var progress = Math.min((timestamp - startTime) / duration, 1);
+    // easeOutExpo
+    var eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+    var val = currentNum + diff * eased;
+    el.textContent = prefix + formatNum(val);
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = prefix + formatNum(targetNum);
+      setTimeout(function() { el.classList.remove('counting'); }, 100);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+// ============================================================
+//  Type Tab Indicator
+// ============================================================
+function updateTypeTabIndicator() {
+  var activeTab = document.querySelector('.type-tab.active');
+  var indicator = document.getElementById('typeTabIndicator');
+  if (!activeTab || !indicator) return;
+  var tabsContainer = document.getElementById('typeTabs');
+  var tabsRect = tabsContainer.getBoundingClientRect();
+  var activeRect = activeTab.getBoundingClientRect();
+  indicator.style.left = (activeRect.left - tabsRect.left) + 'px';
+  indicator.style.width = activeRect.width + 'px';
+  // Set background color based on active type
+  if (selectedType === 'expense') {
+    indicator.style.background = 'rgba(244,63,94,0.15)';
+  } else if (selectedType === 'income') {
+    indicator.style.background = 'rgba(16,185,129,0.15)';
+  } else {
+    indicator.style.background = 'rgba(59,130,246,0.15)';
+  }
+}
 
 // ============================================================
 //  Supabase 初始化
@@ -927,19 +1168,18 @@ function initSupabase() {
   return false;
 }
 
-// 轮询等待库加载
 var initInterval = setInterval(function() {
   if (initSupabase()) {
     clearInterval(initInterval);
     loadData();
   }
 }, 300);
-// 最多等 10 秒
 setTimeout(function() {
   clearInterval(initInterval);
   if (!_sb) {
     console.warn('[Init] Supabase load timeout, using demo mode');
     loadDemoData();
+    renderAll();
   }
 }, 10000);
 
@@ -967,11 +1207,9 @@ async function loadData() {
 
     console.log('[Data] Loaded:', allAccounts.length, 'accounts,', allCategories.length, 'categories,', allTransactions.length, 'transactions');
 
-    // 如果没有分类，插入默认分类
     if (allCategories.length === 0) {
       await insertDefaultCategories();
     }
-    // 如果没有账户，插入默认账户
     if (allAccounts.length === 0) {
       await insertDefaultAccounts();
     }
@@ -1040,7 +1278,6 @@ async function insertDefaultAccounts() {
   }
 }
 
-// 演示数据（Supabase 不可用时）
 function loadDemoData() {
   allCategories = defaultCategories.map(function(c, i) {
     return { id: 'demo_cat_' + i, name: c.name, type: c.type, icon: c.icon, color: c.color, sort_order: c.sort_order, is_active: true };
@@ -1068,7 +1305,8 @@ function renderAll() {
 }
 
 function updateMonthLabel() {
-  document.getElementById('monthLabel').textContent = currentYear + '年' + currentMonth + '月';
+  var label = document.getElementById('monthLabel');
+  label.textContent = currentYear + '年' + currentMonth + '月';
 }
 
 // ---------- Summary ----------
@@ -1080,10 +1318,13 @@ function renderSummary() {
     else if (tx.type === 'expense') expense += parseFloat(tx.amount) || 0;
   });
   var balance = income - expense;
-  document.getElementById('totalIncome').textContent = '¥' + formatNum(income);
-  document.getElementById('totalExpense').textContent = '¥' + formatNum(expense);
+
+  animateNumber(document.getElementById('totalIncome'), formatNum(income), '¥');
+  animateNumber(document.getElementById('totalExpense'), formatNum(expense), '¥');
+
   var balEl = document.getElementById('totalBalance');
-  balEl.textContent = (balance >= 0 ? '¥' : '-¥') + formatNum(Math.abs(balance));
+  var balPrefix = balance >= 0 ? '¥' : '-¥';
+  animateNumber(balEl, formatNum(Math.abs(balance)), balPrefix);
   balEl.className = 'summary-amount balance mono';
   if (balance < 0) balEl.style.color = 'var(--danger)';
   else balEl.style.color = '';
@@ -1104,9 +1345,9 @@ function renderAccounts() {
     return;
   }
   var html = '';
-  allAccounts.forEach(function(acc) {
+  allAccounts.forEach(function(acc, idx) {
     var bal = acc.balance || 0;
-    html += '<div class="account-chip">'
+    html += '<div class="account-chip" style="animation-delay:' + (idx * 0.06) + 's">'
       + '<span class="acc-icon">' + escHtml(acc.icon || '') + '</span>'
       + '<span>' + escHtml(acc.name) + '</span>'
       + '<span class="acc-balance">¥' + formatNum(bal) + '</span>'
@@ -1125,10 +1366,9 @@ function renderTransactions() {
     return;
   }
 
-  // 只显示最近 50 条
   var show = monthTx.slice(0, 50);
   var html = '';
-  show.forEach(function(tx) {
+  show.forEach(function(tx, idx) {
     var cat = findCategory(tx.category_id);
     var acc = findAccount(tx.account_id);
     var icon = cat ? cat.icon : '📦';
@@ -1138,7 +1378,7 @@ function renderTransactions() {
     var sign = typeClass === 'income' ? '+' : (typeClass === 'transfer' ? '' : '-');
     var amt = parseFloat(tx.amount) || 0;
 
-    html += '<div class="tx-item">'
+    html += '<div class="tx-item" style="animation-delay:' + (idx * 0.04) + 's">'
       + '<div class="tx-icon" style="background:' + bgColor + '">' + icon + '</div>'
       + '<div class="tx-info">'
       + '<div class="tx-cat">' + escHtml(catName) + (acc ? ' · ' + escHtml(acc.name) : '') + '</div>'
@@ -1170,7 +1410,6 @@ function renderPieChart() {
     return;
   }
 
-  // 按分类汇总
   var catMap = {};
   monthTx.forEach(function(tx) {
     var cat = findCategory(tx.category_id);
@@ -1186,7 +1425,7 @@ function renderPieChart() {
     colors.push(item.color);
   });
 
-  wrap.innerHTML = '<canvas id="pieCanvas" height="150"></canvas>';
+  wrap.innerHTML = '<canvas id="pieCanvas"></canvas>';
   var ctx = document.getElementById('pieCanvas').getContext('2d');
 
   if (pieChart) pieChart.destroy();
@@ -1198,13 +1437,19 @@ function renderPieChart() {
         data: data,
         backgroundColor: colors,
         borderWidth: 0,
-        hoverOffset: 6
+        hoverOffset: 8
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '65%',
+      animation: {
+        animateRotate: true,
+        animateScale: true,
+        duration: 800,
+        easing: 'easeOutQuart'
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -1229,7 +1474,6 @@ function renderPieChart() {
 function renderBarChart() {
   var wrap = document.getElementById('barChartWrap');
 
-  // 获取最近 6 个月的数据
   var labels = [], incomeData = [], expenseData = [];
   for (var i = 5; i >= 0; i--) {
     var d = new Date(currentYear, currentMonth - 1 - i, 1);
@@ -1248,7 +1492,6 @@ function renderBarChart() {
     expenseData.push(exp);
   }
 
-  // 检查是否全部为 0
   var hasData = incomeData.some(function(v) { return v > 0; }) || expenseData.some(function(v) { return v > 0; });
   if (!hasData) {
     wrap.innerHTML = '<div class="chart-empty">暂无数据</div>';
@@ -1256,7 +1499,7 @@ function renderBarChart() {
     return;
   }
 
-  wrap.innerHTML = '<canvas id="barCanvas" height="150"></canvas>';
+  wrap.innerHTML = '<canvas id="barCanvas"></canvas>';
   var ctx = document.getElementById('barCanvas').getContext('2d');
 
   if (barChart) barChart.destroy();
@@ -1286,6 +1529,10 @@ function renderBarChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 800,
+        easing: 'easeOutQuart'
+      },
       scales: {
         x: {
           grid: { display: false },
@@ -1332,8 +1579,7 @@ function renderBudgets() {
   var monthTx = getMonthTransactions().filter(function(tx) { return tx.type === 'expense'; });
   var html = '';
 
-  allBudgets.forEach(function(budget) {
-    // 计算该分类本月支出
+  allBudgets.forEach(function(budget, idx) {
     var used = 0;
     if (budget.category_id) {
       monthTx.forEach(function(tx) {
@@ -1352,15 +1598,22 @@ function renderBudgets() {
     var cat = findCategory(budget.category_id);
     var name = budget.name || (cat ? cat.name : '总预算');
 
-    html += '<div class="budget-item">'
+    html += '<div class="budget-item" style="animation-delay:' + (idx * 0.06) + 's">'
       + '<div class="budget-top">'
       + '<span class="budget-name">' + escHtml(name) + '</span>'
       + '<span class="budget-vals"><span class="used">¥' + formatNum(used) + '</span> / ¥' + formatNum(total) + '</span>'
       + '</div>'
-      + '<div class="progress-bar"><div class="progress-fill ' + cls + '" style="width:' + pct + '%"></div></div>'
+      + '<div class="progress-bar"><div class="progress-fill ' + cls + '" data-width="' + pct + '%"></div></div>'
       + '</div>';
   });
   container.innerHTML = html;
+
+  // Animate progress bars after render
+  setTimeout(function() {
+    container.querySelectorAll('.progress-fill').forEach(function(el) {
+      el.style.width = el.getAttribute('data-width');
+    });
+  }, 50);
 }
 
 // ---------- Loans ----------
@@ -1372,7 +1625,7 @@ function renderLoans() {
   }
 
   var html = '';
-  allLoans.forEach(function(loan) {
+  allLoans.forEach(function(loan, idx) {
     var totalRepay = 0;
     allRepayments.forEach(function(r) {
       if (r.loan_id === loan.id) totalRepay += parseFloat(r.amount) || 0;
@@ -1380,7 +1633,7 @@ function renderLoans() {
     var remaining = (parseFloat(loan.amount) || 0) - totalRepay;
     var rate = loan.interest_rate ? parseFloat(loan.interest_rate) : 0;
 
-    html += '<div class="loan-item">'
+    html += '<div class="loan-item" style="animation-delay:' + (idx * 0.06) + 's">'
       + '<div class="loan-top">'
       + '<span class="loan-remark">' + escHtml(loan.remark || '借款') + '</span>'
       + '<span class="loan-amount">¥' + formatNum(remaining) + '</span>'
@@ -1401,13 +1654,26 @@ function renderLoans() {
 }
 
 // ============================================================
-//  月份切换
+//  月份切换（带动画）
 // ============================================================
 function changeMonth(delta) {
-  currentMonth += delta;
-  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
-  if (currentMonth < 1) { currentMonth = 12; currentYear--; }
-  renderAll();
+  var label = document.getElementById('monthLabel');
+  label.classList.add('switching');
+
+  setTimeout(function() {
+    currentMonth += delta;
+    if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+    if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+    label.textContent = currentYear + '年' + currentMonth + '月';
+
+    setTimeout(function() {
+      label.classList.remove('switching');
+    }, 20);
+  }, 200);
+
+  setTimeout(function() {
+    renderAll();
+  }, 250);
 }
 
 // ============================================================
@@ -1420,7 +1686,6 @@ function openAddModal(type) {
   selectedFromAccId = null;
   selectedToAccId = null;
 
-  // 设置日期为今天
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('txDate').value = today;
   document.getElementById('txAmount').value = '';
@@ -1428,6 +1693,9 @@ function openAddModal(type) {
 
   switchType(selectedType);
   document.getElementById('addModal').classList.add('active');
+
+  // Update indicator after modal is visible
+  setTimeout(updateTypeTabIndicator, 50);
 }
 
 function closeAddModal() {
@@ -1441,24 +1709,56 @@ function switchType(type) {
   selectedFromAccId = null;
   selectedToAccId = null;
 
-  // 更新 tab 样式
   document.getElementById('tabExpense').classList.toggle('active', type === 'expense');
   document.getElementById('tabIncome').classList.toggle('active', type === 'income');
   document.getElementById('tabTransfer').classList.toggle('active', type === 'transfer');
 
-  // 显示/隐藏分类和账户
   var isTransfer = type === 'transfer';
-  document.getElementById('catGroup').style.display = isTransfer ? 'none' : '';
-  document.getElementById('accGroup').style.display = isTransfer ? 'none' : '';
-  document.getElementById('transferGroup').style.display = isTransfer ? '' : 'none';
+  var catGroup = document.getElementById('catGroup');
+  var accGroup = document.getElementById('accGroup');
+  var transferGroup = document.getElementById('transferGroup');
 
-  // 渲染分类网格
+  // Animate hide/show
+  if (isTransfer) {
+    catGroup.style.opacity = '0'; catGroup.style.transform = 'translateY(-8px)';
+    accGroup.style.opacity = '0'; accGroup.style.transform = 'translateY(-8px)';
+    setTimeout(function() {
+      catGroup.style.display = 'none';
+      accGroup.style.display = 'none';
+      transferGroup.style.display = '';
+      transferGroup.style.opacity = '0'; transferGroup.style.transform = 'translateY(8px)';
+      setTimeout(function() {
+        transferGroup.style.opacity = '1'; transferGroup.style.transform = 'translateY(0)';
+      }, 20);
+    }, 150);
+  } else {
+    transferGroup.style.opacity = '0'; transferGroup.style.transform = 'translateY(-8px)';
+    setTimeout(function() {
+      transferGroup.style.display = 'none';
+      catGroup.style.display = '';
+      accGroup.style.display = '';
+      catGroup.style.opacity = '0'; catGroup.style.transform = 'translateY(8px)';
+      accGroup.style.opacity = '0'; accGroup.style.transform = 'translateY(8px)';
+      setTimeout(function() {
+        catGroup.style.opacity = '1'; catGroup.style.transform = 'translateY(0)';
+        accGroup.style.opacity = '1'; accGroup.style.transform = 'translateY(0)';
+      }, 20);
+    }, 150);
+  }
+
+  // Add transition styles
+  [catGroup, accGroup, transferGroup].forEach(function(el) {
+    el.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+  });
+
   if (!isTransfer) {
     renderCatGrid();
     renderAccGrid();
   } else {
     renderTransferGrids();
   }
+
+  updateTypeTabIndicator();
 }
 
 function renderCatGrid() {
@@ -1469,8 +1769,8 @@ function renderCatGrid() {
     return;
   }
   var html = '';
-  cats.forEach(function(cat) {
-    html += '<button class="cat-item" data-id="' + cat.id + '" onclick="selectCat(\'' + cat.id + '\')">'
+  cats.forEach(function(cat, idx) {
+    html += '<button class="cat-item" data-id="' + cat.id + '" onclick="selectCat(\'' + cat.id + '\')" style="animation: fadeSlideUp 0.3s var(--spring-smooth) ' + (idx * 0.03) + 's both">'
       + '<span class="cat-icon">' + escHtml(cat.icon || '') + '</span>'
       + '<span class="cat-name">' + escHtml(cat.name) + '</span>'
       + '</button>';
@@ -1493,8 +1793,8 @@ function renderAccGrid() {
     return;
   }
   var html = '';
-  allAccounts.forEach(function(acc) {
-    html += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectAcc(\'' + acc.id + '\')">'
+  allAccounts.forEach(function(acc, idx) {
+    html += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectAcc(\'' + acc.id + '\')" style="animation: fadeSlideUp 0.3s var(--spring-smooth) ' + (idx * 0.03) + 's both">'
       + '<span class="acc-icon">' + escHtml(acc.icon || '') + '</span>'
       + '<span class="acc-name">' + escHtml(acc.name) + '</span>'
       + '</button>';
@@ -1519,12 +1819,12 @@ function renderTransferGrids() {
     return;
   }
   var htmlFrom = '', htmlTo = '';
-  allAccounts.forEach(function(acc) {
-    htmlFrom += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectFromAcc(\'' + acc.id + '\')">'
+  allAccounts.forEach(function(acc, idx) {
+    htmlFrom += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectFromAcc(\'' + acc.id + '\')" style="animation: fadeSlideUp 0.3s var(--spring-smooth) ' + (idx * 0.03) + 's both">'
       + '<span class="acc-icon">' + escHtml(acc.icon || '') + '</span>'
       + '<span class="acc-name">' + escHtml(acc.name) + '</span>'
       + '</button>';
-    htmlTo += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectToAcc(\'' + acc.id + '\')">'
+    htmlTo += '<button class="acc-select-item" data-id="' + acc.id + '" onclick="selectToAcc(\'' + acc.id + '\')" style="animation: fadeSlideUp 0.3s var(--spring-smooth) ' + (idx * 0.03) + 's both">'
       + '<span class="acc-icon">' + escHtml(acc.icon || '') + '</span>'
       + '<span class="acc-name">' + escHtml(acc.name) + '</span>'
       + '</button>';
@@ -1557,7 +1857,6 @@ async function submitTransaction() {
   var date = document.getElementById('txDate').value;
   var desc = document.getElementById('txDesc').value.trim();
 
-  // 验证
   if (!amount || amount <= 0) { showToast('请输入有效金额', 'error'); return; }
   if (!date) { showToast('请选择日期', 'error'); return; }
 
@@ -1595,13 +1894,10 @@ async function submitTransaction() {
     if (_sb) {
       var res = await _sb.from('transactions').insert(row).select();
       if (res.error) throw res.error;
-      console.log('[TX] Inserted:', res.data);
-      // 添加到本地缓存
       if (res.data && res.data.length > 0) {
         allTransactions.unshift(res.data[0]);
       }
     } else {
-      // 演示模式
       row.id = 'demo_' + Date.now();
       allTransactions.unshift(row);
     }
@@ -1619,23 +1915,34 @@ async function submitTransaction() {
 }
 
 // ============================================================
-//  删除交易
+//  删除交易（带动画）
 // ============================================================
 async function deleteTransaction(id) {
   if (!confirm('确定删除这条记录吗？')) return;
 
-  try {
-    if (_sb) {
-      var res = await _sb.from('transactions').delete().eq('id', id);
-      if (res.error) throw res.error;
+  // Find the tx-item element and animate it out
+  var txItems = document.querySelectorAll('.tx-item');
+  txItems.forEach(function(item) {
+    var delBtn = item.querySelector('.tx-del');
+    if (delBtn && delBtn.getAttribute('onclick').indexOf(id) !== -1) {
+      item.classList.add('removing');
     }
-    allTransactions = allTransactions.filter(function(tx) { return tx.id !== id; });
-    showToast('已删除', 'info');
-    renderAll();
-  } catch (e) {
-    console.error('[TX] Delete error:', e);
-    showToast('删除失败', 'error');
-  }
+  });
+
+  setTimeout(async function() {
+    try {
+      if (_sb) {
+        var res = await _sb.from('transactions').delete().eq('id', id);
+        if (res.error) throw res.error;
+      }
+      allTransactions = allTransactions.filter(function(tx) { return tx.id !== id; });
+      showToast('已删除', 'info');
+      renderAll();
+    } catch (e) {
+      console.error('[TX] Delete error:', e);
+      showToast('删除失败', 'error');
+    }
+  }, 300);
 }
 
 // ============================================================
@@ -1646,7 +1953,6 @@ function openBudgetModal() {
   document.getElementById('budgetAmount').value = '';
   document.getElementById('budgetAlert').value = '80';
 
-  // 填充分类下拉
   var sel = document.getElementById('budgetCat');
   var expenseCats = allCategories.filter(function(c) { return c.type === 'expense'; });
   var html = '<option value="">全部分类</option>';
@@ -1829,7 +2135,6 @@ function exportExcel() {
     return;
   }
 
-  // BOM + CSV
   var bom = '\uFEFF';
   var header = '日期,类型,分类,账户,金额,备注\n';
   var rows = '';
@@ -1896,8 +2201,11 @@ function showToast(msg, type) {
   el.textContent = msg;
   container.appendChild(el);
   setTimeout(function() {
-    if (el.parentNode) el.parentNode.removeChild(el);
-  }, 2600);
+    el.classList.add('removing');
+    setTimeout(function() {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, 300);
+  }, 2300);
 }
 
 // ============================================================
@@ -1909,6 +2217,15 @@ document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
       overlay.classList.remove('active');
     }
   });
+});
+
+// ============================================================
+//  Window resize - update tab indicator
+// ============================================================
+window.addEventListener('resize', function() {
+  if (document.getElementById('addModal').classList.contains('active')) {
+    updateTypeTabIndicator();
+  }
 });
 </script>
 </body>
